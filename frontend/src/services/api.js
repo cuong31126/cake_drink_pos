@@ -1,8 +1,18 @@
 import axios from 'axios';
 
-// Khởi tạo instance Axios với đường dẫn cấu hình từ file .env
+// Tự động chuẩn hóa URL API: Nếu biến VITE_API_URL thiếu '/api/v1' ở cuối, tự động bổ sung vào
+const getBaseURL = () => {
+  let rawUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api/v1';
+  rawUrl = rawUrl.trim().replace(/\/+$/, '');
+  if (!rawUrl.endsWith('/api/v1')) {
+    return `${rawUrl}/api/v1`;
+  }
+  return rawUrl;
+};
+
+// Khởi tạo instance Axios với đường dẫn chuẩn hóa
 const API = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5000/api/v1',
+  baseURL: getBaseURL(),
   timeout: 10000, // Ngắt kết nối nếu quá 10 giây không phản hồi
 });
 

@@ -13,14 +13,19 @@ connectDB();
 app.use(cors()); // Cho phép Frontend từ Port khác (Ví dụ Vite React Port 5173) gọi API sang
 app.use(express.json()); // Cho phép Express đọc cấu hình dữ liệu dạng JSON từ Request Body
 
-// Đăng ký các phân cấp tuyến đường API hệ thống
-app.use('/api/v1', require('./routes/api')); // Gom toàn bộ 49 API chức năng vào tiền tố v1
+// Đăng ký các phân cấp tuyến đường API hệ thống (Hỗ trợ tiền tố v1 và fallback trực tiếp)
+const apiRoutes = require('./routes/api');
+app.use('/api/v1', apiRoutes); // Đầy đủ tiền tố chuẩn: /api/v1/auth/google
+app.use('/api', apiRoutes);    // Tiền tố ngắn: /api/auth/google
 app.use('/api/webhooks', require('./routes/webhooks')); // Nhánh webhook công cộng nhận tín hiệu PayOS
 
 // Định tuyến cơ bản kiểm tra trạng thái hoạt động của Server
 app.get('/', (req, res) => {
   res.status(200).json({ status: 'active', message: 'Hệ thống POS Cake & Drink Backend đang chạy ổn định.' });
 });
+
+// Fallback tuyến đường gốc cho các request trực tiếp (như /auth/google)
+app.use('/', apiRoutes);
 
 // Nhúng bộ đôi Middleware xử lý và bắt lỗi tập trung (Bắt buộc phải đặt ở cuối cùng sau các Routes)
 app.use(notFound);
