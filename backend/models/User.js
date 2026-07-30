@@ -42,6 +42,10 @@ const userSchema = new mongoose.Schema({
     // Định biên nhân viên thuộc chi nhánh nào (Ví dụ: 'store_Q1'). Admin thì trường này bằng null.
     default: null
   },
+  pin: {
+    type: String,
+    default: '123456' // Mã PIN 6 chữ số mặc định cho nhân viên/admin
+  },
   is_active: {
     type: Boolean,
     default: true

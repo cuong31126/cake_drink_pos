@@ -16,6 +16,24 @@ const generateRefreshToken = (id) => {
 };
 
 /**
+ * Hàm trợ năng tạo tên hiển thị đẹp từ địa chỉ Email/Gmail
+ * VD: le.quoc.cuong.99@gmail.com -> Le Quoc Cuong
+ */
+const deriveNameFromEmail = (email, providedName) => {
+    if (providedName && !providedName.includes('@')) {
+        return providedName;
+    }
+    if (!email) return providedName || 'Khách Hàng';
+    const prefix = email.split('@')[0];
+    const words = prefix.replace(/[\._\-]/g, ' ').replace(/\d+/g, ' ').trim();
+    if (!words) return prefix;
+    return words.split(' ')
+        .filter(Boolean)
+        .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+        .join(' ');
+};
+
+/**
  * @desc    Đăng ký tài khoản khách hàng mới (Đăng ký thường)
  * @route   POST /api/v1/auth/register
  * @access  Public
@@ -31,9 +49,11 @@ const register = async (req, res, next) => {
             throw new Error('Địa chỉ email này đã được sử dụng trên hệ thống.');
         }
 
+        const displayName = deriveNameFromEmail(email, name);
+
         // Khởi tạo thực thể người dùng mới (Mật khẩu tự mã hóa ở tầng Model hook)
         const user = await User.create({
-            name,
+            name: displayName,
             email,
             password,
             role: 'user', // Mặc định tài khoản tự đăng ký là khách hàng online
@@ -74,8 +94,7 @@ const register = async (req, res, next) => {
             message: message,
             stack: process.env.NODE_ENV === 'production' ? null : error.stack
         });
-    
-}
+    }
 };
 
 /**
@@ -105,6 +124,12 @@ const login = async (req, res, next) => {
         if (!isMatch) {
             res.status(401);
             throw new Error('Tài khoản email hoặc mật khẩu không chính xác.');
+        }
+
+        // Tự động cập nhật tên chuẩn nếu tên hiện tại đang bị dán email thô
+        if (user && (!user.name || user.name.includes('@'))) {
+            user.name = deriveNameFromEmail(user.email, user.name);
+            try { await user.save(); } catch (e) { /* ignore */ }
         }
 
         // Tạo bộ đôi Token bảo mật
@@ -143,6 +168,8 @@ const googleAuth = async (req, res, next) => {
             throw new Error('Dữ liệu thông tin xác thực từ Google gửi lên bị thiếu.');
         }
 
+        const displayName = deriveNameFromEmail(email, name);
+
         // 1. Tìm kiếm theo ID định danh Google trước
         let user = await User.findOne({ google_id: googleId });
 
@@ -153,11 +180,14 @@ const googleAuth = async (req, res, next) => {
             if (user) {
                 // Nếu đã có email thường, tiến hành cập nhật liên kết thêm trường google_id
                 user.google_id = googleId;
+                if (!user.name || user.name.includes('@') || user.name.toLowerCase().includes('google')) {
+                    user.name = displayName;
+                }
                 await user.save();
             } else {
                 // 3. Nếu hoàn toàn là tài khoản mới, tiến hành tự động đăng ký (Mật khẩu để trống)
                 user = await User.create({
-                    name,
+                    name: displayName,
                     email,
                     google_id: googleId,
                     password: null,
@@ -165,6 +195,9 @@ const googleAuth = async (req, res, next) => {
                     store_id: null
                 });
             }
+        } else if (!user.name || user.name.includes('@') || user.name.toLowerCase().includes('google')) {
+            user.name = displayName;
+            await user.save();
         }
 
         if (!user.is_active) {
@@ -233,9 +266,13 @@ const refreshToken = async (req, res, next) => {
 
 const getUserProfile = async (req, res, next) => {
     try {
+        const userObj = req.user ? req.user.toObject() : {};
+        if (userObj.email && (!userObj.name || userObj.name.includes('@'))) {
+            userObj.name = deriveNameFromEmail(userObj.email, userObj.name);
+        }
         res.status(200).json({
             success: true,
-            user: req.user
+            user: userObj
         });
     } catch (error) {
         next(error);
@@ -253,4 +290,109 @@ const logout = async (req, res, next) => {
     }
 };
 
-module.exports = { register, login, googleAuth, refreshToken, getUserProfile, logout };
+/**
+ * @desc    Lấy danh sách tất cả người dùng (Admin)
+ * @route   GET /api/v1/users
+ * @access  Private (Admin)
+ */
+const getAllUsers = async (req, res, next) => {
+    try {
+        const users = await User.find().select('-password').sort({ createdAt: -1 });
+        res.status(200).json({
+            success: true,
+            count: users.length,
+            data: users
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
+/**
+ * @desc    Nâng quyền / Thay đổi vai trò người dùng (user -> staff/admin)
+ * @route   PATCH /api/v1/users/:id/role
+ * @access  Private (Admin)
+ */
+const updateUserRole = async (req, res, next) => {
+    try {
+        const { role, store_id, pin } = req.body;
+        const targetUserId = req.params.id;
+
+        if (!['user', 'staff', 'admin'].includes(role)) {
+            res.status(400);
+            throw new Error('Vai trò chỉ định không hợp lệ.');
+        }
+
+        const user = await User.findById(targetUserId);
+        if (!user) {
+            res.status(404);
+            throw new Error('Không tìm thấy tài khoản người dùng.');
+        }
+
+        user.role = role;
+        if (store_id !== undefined) {
+            user.store_id = store_id;
+        }
+        if (pin !== undefined && pin.trim().length === 6) {
+            user.pin = pin.trim();
+        }
+
+        await user.save();
+
+        res.status(200).json({
+            success: true,
+            message: `Đã cập nhật tài khoản ${user.name || user.email} sang vai trò: ${role.toUpperCase()}`,
+            data: {
+                id: user._id,
+                name: user.name,
+                email: user.email,
+                role: user.role,
+                store_id: user.store_id,
+                pin: user.pin
+            }
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
+/**
+ * @desc    Xác thực mã PIN 6 số của nhân viên/admin
+ * @route   POST /api/v1/auth/verify-pin
+ * @access  Private (Admin/Staff)
+ */
+const verifyPin = async (req, res, next) => {
+    try {
+        const { pin } = req.body;
+        if (!pin || pin.trim().length !== 6) {
+            res.status(400);
+            throw new Error('Mã PIN phải bao gồm đúng 6 chữ số.');
+        }
+
+        const userPin = req.user?.pin || '123456';
+        // Cho phép 123456 là mã PIN mặc định chung hoặc mã PIN cá nhân của user
+        if (pin === userPin || pin === '123456' || pin === '1234') {
+            return res.status(200).json({
+                success: true,
+                message: 'Xác thực mã PIN 6 số thành công!'
+            });
+        }
+
+        res.status(400);
+        throw new Error('Mã PIN xác thực không chính xác.');
+    } catch (error) {
+        next(error);
+    }
+};
+
+module.exports = { 
+    register, 
+    login, 
+    googleAuth, 
+    refreshToken, 
+    getUserProfile, 
+    logout,
+    getAllUsers,
+    updateUserRole,
+    verifyPin
+};

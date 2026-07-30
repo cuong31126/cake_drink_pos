@@ -779,12 +779,11 @@ db.products.insertMany([
 
 | **STT** | **Module** | **HTTP Method** | **API Endpoint Route** | **HTTP Status OK** | **HTTP Status Lỗi** | **Chức năng ngắn gọn (Bổ sung mới)** |
 | --- | --- | --- | --- | --- | --- | --- |
-| **43** | **Shift** | `GET` | `/api/v1/shifts/sync-cash` | `200` OK | `401` Unauthorized | Nhân viên bấm ở Topbar để xem số tiền mặt thực tế đã thu trong ca |
-|  |  |  |  |  |  |  |
-|  |  |  |  |  |  |  |
-|  |  |  |  |  |  |  |
-|  |  |  |  |  |  |  |
-|  |  |  |  |  |  |  |
+| **49** | **Order** | `POST` | `/api/v1/orders/take-away` | `201` Created | `400` Bad Request | Khởi tạo đơn hàng mang đi nháp mới cho khách hàng/nhân viên |
+| **50** | **Order** | `POST` | `/api/v1/orders/:id/accept` | `200` OK | `404` Not Found | Nhân viên nhận đơn hàng chờ xác nhận, đưa vào bếp (pending_confirm -> serving) |
+| **51** | **Order** | `POST` | `/api/v1/orders/:id/ready` | `200` OK | `404` Not Found | Bếp báo đã làm xong đồ ăn/nước uống (serving -> ready) |
+| **52** | **Order** | `POST` | `/api/v1/orders/:id/confirm` | `200` OK | `404` Not Found | Cập nhật cờ xác nhận giỏ hàng is_confirmed (true/false) của khách |
+| **53** | **Product** | `PATCH` | `/api/v1/products/:id/toggle-status` | `200` OK | `404` Not Found | Bật/tắt trạng thái còn món/hết món (selling vs out_of_stock) của sản phẩm |
 
 ## Cách 1: Sử dụng tài khoản Cá nhân thật của bạn kết hợp với PayOS (Khuyên dùng)
 

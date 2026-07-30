@@ -22,7 +22,6 @@ const orderItemSchema = new mongoose.Schema({
     min: [1, 'Số lượng tối thiểu là 1']
   },
   selected_attributes: {
-    // Lưu trữ cấu hình kích cỡ, mức đường, mức đá dạng object linh hoạt
     type: Object,
     default: {}
   },
@@ -34,16 +33,16 @@ const orderItemSchema = new mongoose.Schema({
 });
 
 /**
- * Sub-schema chuyên biệt lưu vết lịch sử xóa/giảm món (Giải pháp C chống gian lận tài chính)
+ * Sub-schema chuyên biệt lưu vết lịch sử xóa/giảm món
  */
 const cancelledItemSchema = new mongoose.Schema({
   product_id: { type: String, required: true },
   name: { type: String, required: true },
-  quantity: { type: Number, required: true }, // Số lượng bị cắt giảm hoặc xóa hẳn
+  quantity: { type: Number, required: true },
   reason: { type: String, default: 'Khách đổi ý' },
   updated_by: { 
     type: String, 
-    required: true // Ghi nhận ID của người có thẩm quyền phê duyệt lệnh hủy (Admin/Manager - Giải pháp A)
+    required: true
   },
   cancelled_at: {
     type: Date,
@@ -60,21 +59,32 @@ const orderSchema = new mongoose.Schema({
     type: String,
     required: [true, 'Mã chi nhánh cửa hàng là bắt buộc']
   },
+  customer_id: {
+    type: String,
+    default: null
+  },
   table_id: {
     type: String,
-    // Có thể null đối với trường hợp đơn mang đi (take-away) hoặc đơn giao hàng (delivery)
     default: null 
   },
   created_by: {
     type: String,
-    required: [true, 'ID nhân viên lập đơn là bắt buộc']
+    required: [true, 'ID nhân viên / người lập đơn là bắt buộc']
   },
   order_type: {
     type: String,
     enum: ['dine-in', 'take-away', 'delivery'],
     required: true
   },
-  items: [orderItemSchema], // Mảng danh sách các món ăn hiện tại
+  delivery_address: {
+    type: String,
+    default: ""
+  },
+  customer_phone: {
+    type: String,
+    default: ""
+  },
+  items: [orderItemSchema],
   sub_total: {
     type: Number,
     required: true,
@@ -92,15 +102,23 @@ const orderSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['serving', 'completed', 'cancelled'],
-    default: 'serving'
+    enum: ['pending_confirm', 'serving', 'ready', 'completed', 'cancelled'],
+    default: 'pending_confirm'
   },
   payment_status: {
     type: String,
     enum: ['unpaid', 'paid'],
     default: 'unpaid'
   },
-  // Mảng lưu vết nhật ký chống thất thoát tiền
+  payment_method: {
+    type: String,
+    enum: ['cash', 'payos', 'momo', 'bank', 'unspecified'],
+    default: 'cash'
+  },
+  is_confirmed: {
+    type: Boolean,
+    default: false
+  },
   cancelled_items: [cancelledItemSchema]
 }, {
   timestamps: true

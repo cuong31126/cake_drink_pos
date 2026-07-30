@@ -1,30 +1,67 @@
 const ChatRoom = require('../models/ChatRoom');
 const Message = require('../models/Message');
-const GoogleGenAIModule = require('@google/generative-ai'); 
 const fs = require('fs');
 const path = require('path');
 
-const aiKey = process.env.GEMINI_KEY;
-let ai = null;
+/* 
+=========================================================================
+🚫 NGIÊM CẤM GỌI API GEMINI VÀ CÁC DỊCH VỤ CỦA GOOGLE AI STUDIO
+TOÀN BỘ PHẦN KHỞI TẠO VÀ GỌI API BÊN NGOÀI ĐÃ ĐƯỢC CHUYỂN THÀNH COMMENT:
 
-if (aiKey) {
-  // 💡 GIẢI PHÁP MỚI: Dò tìm trực tiếp trên Module mà không qua biến trung gian, loại bỏ hoàn toàn ReferenceError
-  if (GoogleGenAIModule.GoogleGenerativeAI) {
-    ai = new GoogleGenAIModule.GoogleGenerativeAI(aiKey);
-  } else if (GoogleGenAIModule.GoogleGenAI) {
-    ai = new GoogleGenAIModule.GoogleGenAI({ apiKey: aiKey });
-  } else {
-    ai = new GoogleGenAIModule(aiKey);
+// const { GoogleGenerativeAI } = require('@google/generative-ai'); 
+// const getAPIKeysPool = () => {
+//   const keysStr = `${process.env.GEMINI_KEYS || ''},${process.env.GEMINI_KEY || ''}`;
+//   return keysStr.split(',').map(k => k.trim()).filter(Boolean);
+// };
+=========================================================================
+*/
+
+// =========================================================================
+// 🚀 TRỢ LÝ TỰ ĐỘNG NỘI BỘ (CHẠY 100% OFFLINE LOCAL - KHÔNG TIÊU TỐN API KEY)
+// =========================================================================
+const matchLocalBotResponse = (query, role = 'user') => {
+  const q = query.toLowerCase().trim();
+
+  // A. Câu hỏi dành cho Khách Hàng (User)
+  if (role === 'user') {
+    if (q.includes('giờ mở') || q.includes('mấy giờ') || q.includes('đóng cửa') || q.includes('thời gian')) {
+      return "Dạ tiệm bánh mở cửa phục vụ từ 07:00 - 22:30 hàng ngày (kể cả Thứ 7, Chủ Nhật và các ngày Lễ) nhé! 🍰";
+    }
+    if (q.includes('địa chỉ') || q.includes('chi nhánh') || q.includes('ở đâu') || q.includes('quán ở đâu') || q.includes('vị trí')) {
+      return "Dạ hệ thống cửa hàng hiện tại có 2 chi nhánh:\n📍 Chi nhánh 1: 123 Đường Lê Lợi, Phường Bến Thành, Quận 1, TP.HCM\n📍 Chi nhánh 2: 456 Đường Võ Văn Ngân, Phường Linh Chiểu, TP. Thủ Đức, TP.HCM 🏪";
+    }
+    if (q.includes('hotline') || q.includes('sđt') || q.includes('số điện thoại') || q.includes('liên hệ') || q.includes('gọi')) {
+      return "Dạ Hotline hỗ trợ & đặt bánh tiệc của tiệm là: 1900 8888 (Trực từ 07:00 - 22:30 hàng ngày) ạ! ☎️";
+    }
+    if (q.includes('thanh toán') || q.includes('chuyển khoản') || q.includes('mã qr') || q.includes('payos') || q.includes('thẻ')) {
+      return "Dạ tiệm hỗ trợ thanh toán Tiền mặt trực tiếp, Quét mã QR Chuyển khoản ngân hàng tự động (PayOS/MBBank) và Thẻ rất nhanh chóng ạ! 💳";
+    }
+    if (q.includes('món hot') || q.includes('best seller') || q.includes('ngon nhất') || q.includes('bánh gì') || q.includes('gợi ý')) {
+      return "Dạ các món Best Seller được yêu thích nhất tại tiệm gồm có:\n🍰 Bánh ngọt: Tiramisu Cảo, Croissant Bơ Thụy Sĩ, Cake Matcha Phô Mai.\n🥤 Thức uống: Trà Sữa Kem Trứng Nướng, Cà Phê Muối Cháy, Trà Trái Cây Tươi nhé! 🌟";
+    }
+    if (q.includes('đặt món') || q.includes('mua hàng') || q.includes('giao hàng') || q.includes('ship')) {
+      return "Dạ quý khách có thể bấm vào nút '+ Đặt thực đơn mới' ở góc trên để chọn món & đặt giao hàng/mang đi dễ dàng nhé! 🛵";
+    }
   }
-}
+
+  // B. Câu hỏi dành cho Nhân Viên / Admin (Staff)
+  if (role !== 'user') {
+    if (q.includes('kết ca') || q.includes('đóng két') || q.includes('chốt ca') || q.includes('giao ca')) {
+      return "📋 Quy trình Kết ca & Đóng két dành cho Thu ngân:\n1. Kiểm tra tất cả các đơn hàng trên POS đã hoàn thành ('completed').\n2. Đếm tiền mặt thực tế trong két.\n3. So sánh với số dư hệ thống trên tab Quản lý Hóa đơn.\n4. Bấm 'Báo cáo kết ca' và niêm phong túi tiền.";
+    }
+    if (q.includes('hủy món') || q.includes('đổi món') || q.includes('sửa đơn')) {
+      return "ℹ️ Để hủy hoặc sửa món cho khách hàng: Vào tab 'Hàng đợi phục vụ' (/queue) hoặc 'Quản lý Hóa đơn' (/bills) để thao tác nhé!";
+    }
+  }
+
+  // C. Phản hồi mặc định nếu từ khóa nằm ngoài danh sách
+  return role === 'user'
+    ? "Dạ cảm ơn câu hỏi của bạn! Trợ lý tự động của tiệm đã ghi nhận. Nếu bạn cần hỗ trợ thêm thông tin chi tiết, vui lòng chuyển qua kênh 'Hỗ trợ viên trực quầy' ở cột bên trái để nhắn tin trực tiếp với Nhân viên nhé! 🍰"
+    : "ℹ️ Trợ lý tự động nội bộ: Câu hỏi của bạn chưa nằm trong danh mục tra cứu nhanh. Vui lòng liên hệ Admin hoặc Quản lý chi nhánh để được giải đáp!";
+};
 
 /**
- * @desc    Gửi câu hỏi tới Trợ lý AI nội bộ (Phòng chat AI độc lập cố định bên trái)
- * @route   POST /api/v1/ai/chat-assistant
- * ... Giữ nguyên toàn bộ phần code xử lý handleAIChatAssistant phía dưới của bạn ...
- */
-/**
- * @desc    Gửi câu hỏi tới Trợ lý AI nội bộ (Phòng chat AI độc lập cố định bên trái)
+ * @desc    Gửi câu hỏi tới Trợ lý tự động nội bộ (Phòng chat AI) - 100% Offline, Không gọi API bên ngoài
  * @route   POST /api/v1/ai/chat-assistant
  * @access  Private (Mọi người dùng đã đăng nhập hệ thống)
  */
@@ -32,16 +69,11 @@ const handleAIChatAssistant = async (req, res, next) => {
   try {
     const { room_id, message_text } = req.body;
 
-    if (!ai) {
-      res.status(500);
-      throw new Error('Tính năng AI hiện chưa được cấu hình khóa GEMINI_KEY trong file môi trường Backend.');
-    }
-
     // 1. Kiểm tra sự tồn tại của phòng chat AI
     const room = await ChatRoom.findById(room_id);
     if (!room || !room.is_ai_room) {
       res.status(400);
-      throw new Error('Yêu cầu không hợp lệ. Mã ID phòng chat không phải là phòng tương tác AI.');
+      throw new Error('Yêu cầu không hợp lệ. Mã ID phòng chat không phải là phòng tương tác Trợ lý.');
     }
 
     // 2. Lưu tin nhắn câu hỏi của Người dùng vào cơ sở dữ liệu trước
@@ -52,73 +84,44 @@ const handleAIChatAssistant = async (req, res, next) => {
       message_text: message_text.trim()
     });
     
-    // Đẩy vào mảng nhúng của ChatRoom để đồng bộ dữ liệu đọc nhanh
     room.messages.push(userMessage);
     room.last_message = message_text.trim();
     await room.save();
 
-    // 3. Đọc dữ liệu kiến thức (Knowledge Base) tương ứng với vai trò (Role) của tài khoản
-    let knowledgeData = '';
-    let systemPrompt = '';
+    /*
+    =========================================================================
+    🚫 ĐÃ KHÓA / COMMENT TOÀN BỘ CODE GỌI API GEMINI & GOOGLE AI STUDIO:
 
-    try {
-      if (room.user_role === 'user') {
-        // Khách hàng mua online: Chỉ đọc tài liệu về Thực đơn, Giá cả, Giờ hoạt động
-        const filePath = path.join(__dirname, '../constants/ai_knowledge_user.md');
-        knowledgeData = fs.readFileSync(filePath, 'utf8');
-        systemPrompt = `Bạn là trợ lý ảo phục vụ khách hàng của Tiệm Bánh & Nước. Hãy dựa vào tài liệu cửa hàng sau để trả lời khách ngắn gọn, lịch sự: \n${knowledgeData}`;
-      } else {
-        // Nhân viên/Admin: Được phép đọc thêm tài liệu nghiệp vụ công thức, quy trình giao ca nội bộ
-        const filePath = path.join(__dirname, '../constants/ai_knowledge_staff.md');
-        knowledgeData = fs.readFileSync(filePath, 'utf8');
-        systemPrompt = `Bạn là cố vấn nghiệp vụ nội bộ dành cho nhân viên của Tiệm Bánh & Nước. Hãy dựa vào quy trình sau để hướng dẫn nhân viên xử lý chính xác: \n${knowledgeData}`;
-      }
-    } catch (fileError) {
-      console.warn(`[AI Warning] Không thể đọc file dữ liệu tri thức tĩnh: ${fileError.message}. Sử dụng Prompt mặc định.`);
-      systemPrompt = "Bạn là trợ lý ảo hỗ trợ thông tin cho chuỗi cửa hàng Tiệm Bánh & Nước.";
-    }
+    // const apiKeys = getAPIKeysPool();
+    // const aiClient = new GoogleGenerativeAI(activeKey);
+    // const model = aiClient.getGenerativeModel({ model: candidateModel });
+    // const result = await model.generateContent(historyPrompt);
+    // aiResponseText = result.response.text();
+    =========================================================================
+    */
 
-    // 4. Gọi mô hình xử lý sinh văn bản của Gemini (Sử dụng dòng mô hình gemini-1.5-flash tốc độ cao)
-    const model = ai.getGenerativeModel({ 
-      model: 'gemini-1.5-flash',
-      systemInstruction: systemPrompt // Đóng gói chỉ thị hệ thống bảo mật ngữ cảnh
-    });
+    // 3. Xử lý phản hồi tự động 100% Nội bộ / Local Offline
+    const botResponseText = matchLocalBotResponse(message_text, room.user_role);
 
-    // Lấy ra lịch sử 5 tin nhắn gần nhất trong phòng chat để AI hiểu ngữ cảnh cuộc hội thoại trước đó
-    const contextMessages = await Message.find({ room_id: room._id })
-      .sort({ createdAt: -1 })
-      .limit(5);
-    
-    let historyPrompt = "Lịch sử hội thoại gần đây:\n";
-    contextMessages.reverse().forEach(msg => {
-      historyPrompt += `${msg.sender_type}: ${msg.message_text}\n`;
-    });
-    historyPrompt += `Câu hỏi mới nhất cần trả lời: ${message_text}`;
-
-    const result = await model.generateContent(historyPrompt);
-    const aiResponseText = result.response.text();
-
-    // 5. Lưu tin nhắn phản hồi của Trợ lý AI vào cơ sở dữ liệu
+    // 4. Lưu tin nhắn phản hồi của Trợ lý Bot vào cơ sở dữ liệu
     const aiMessage = await Message.create({
       room_id: room._id,
       sender_id: 'system_bot_ai',
       sender_type: 'bot',
-      message_text: aiResponseText.trim(),
+      message_text: botResponseText.trim(),
       is_read: true
     });
 
-    // Cập nhật lại trạng thái phòng chat tổng thể
     room.messages.push(aiMessage);
-    room.last_message = aiResponseText.trim();
+    room.last_message = botResponseText.trim();
     await room.save();
 
-    // 6. Phản hồi dữ liệu về cho Client (Frontend nhận được sẽ render ngay lập tức)
+    // 5. Trả kết quả về cho Frontend hiển thị ngay lập tức
     res.status(200).json({
       success: true,
       data: aiMessage
     });
 
-  // 💡 ĐÃ SỬA: Bổ sung khối bắt lỗi tập trung và xuất hàm (Export) ra ngoài
   } catch (error) {
     next(error);
   }

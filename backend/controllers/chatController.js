@@ -1,5 +1,6 @@
 const ChatRoom = require('../models/ChatRoom');
 const Message = require('../models/Message');
+const User = require('../models/User');
 
 /**
  * @desc    Khởi tạo phòng chat tư vấn mới (AI hoặc người thật)
@@ -9,15 +10,16 @@ const Message = require('../models/Message');
 const createChatRoom = async (req, res, next) => {
   try {
     const { is_ai_room } = req.body;
+    const userId = req.user._id.toString();
     
     let room = await ChatRoom.findOne({ 
-      customer_id: req.user._id.toString(), 
+      customer_id: userId, 
       is_ai_room: is_ai_room || false 
     });
 
     if (!room) {
       room = await ChatRoom.create({
-        customer_id: req.user._id.toString(),
+        customer_id: userId,
         user_role: req.user.role,
         is_ai_room: is_ai_room || false,
         last_message: ""
@@ -34,29 +36,55 @@ const createChatRoom = async (req, res, next) => {
 };
 
 /**
- * @desc    Lấy danh sách các phòng chat
+ * @desc    Lấy danh sách các phòng chat độc lập của từng khách hàng
  * @route   GET /api/v1/chats/rooms
- * @access  Private (Staff/Admin)
+ * @access  Private (Staff/Admin/User)
  */
 const getChatRooms = async (req, res, next) => {
   try {
     let rooms;
     if (req.user.role === 'user') {
       // Khách hàng chỉ xem phòng chat của chính mình
-      rooms = await ChatRoom.find({ customer_id: req.user._id.toString() }).sort({ updatedAt: -1 });
+      rooms = await ChatRoom.find({ customer_id: req.user._id.toString() }).sort({ updatedAt: -1 }).lean();
     } else {
-      // Nhân viên và Admin xem tất cả phòng của khách (is_ai_room: false) và phòng AI riêng của mình
+      // Nhân viên và Admin xem tất cả phòng của từng khách (is_ai_room: false) và phòng AI riêng của mình
       rooms = await ChatRoom.find({
         $or: [
           { is_ai_room: false },
           { customer_id: req.user._id.toString(), is_ai_room: true }
         ]
-      }).sort({ updatedAt: -1 });
+      }).sort({ updatedAt: -1 }).lean();
     }
+
+    // 💡 KHẮC PHỤC TRIỆT ĐỂ: Lọc trùng lặp phòng chat của từng Khách Hàng (Tách biệt 100% phòng chat từng User)
+    const seenCustomers = new Set();
+    const uniqueRooms = [];
+    
+    rooms.forEach(r => {
+      if (r.is_ai_room) {
+        uniqueRooms.push(r);
+      } else if (!seenCustomers.has(r.customer_id)) {
+        seenCustomers.add(r.customer_id);
+        uniqueRooms.push(r);
+      }
+    });
+
+    // Đính kèm thông tin tên người dùng thực tế
+    const customerIds = uniqueRooms.map(r => r.customer_id);
+    const users = await User.find({ _id: { $in: customerIds } }).select('_id name email googleName role');
+    const userMap = {};
+    users.forEach(u => { 
+      userMap[u._id.toString()] = u.googleName || u.name || u.email; 
+    });
+
+    const enrichedRooms = uniqueRooms.map(r => ({
+      ...r,
+      customer_name: userMap[r.customer_id] || `Khách #${r.customer_id.slice(-4).toUpperCase()}`
+    }));
 
     res.status(200).json({
       success: true,
-      data: rooms
+      data: enrichedRooms
     });
   } catch (error) {
     next(error);
@@ -88,18 +116,27 @@ const getRoomMessages = async (req, res, next) => {
 const sendRoomMessage = async (req, res, next) => {
   try {
     const { message_text } = req.body;
+    const roomId = req.params.id;
+
+    const room = await ChatRoom.findById(roomId);
+    if (!room) {
+      res.status(404);
+      throw new Error('Không tìm thấy phòng chat chỉ định.');
+    }
+
     const message = await Message.create({
       _id: 'm_' + Date.now(),
-      room_id: req.params.id,
+      room_id: roomId,
       sender_id: req.user._id.toString(),
       sender_type: req.user.role === 'user' ? 'user' : 'staff',
       message_text: message_text.trim(),
       is_read: false
     });
 
-    await ChatRoom.findByIdAndUpdate(req.params.id, { 
-      last_message: message_text.trim() 
-    });
+    // Cập nhật lại thông tin phòng chat
+    room.last_message = message_text.trim();
+    room.updatedAt = new Date();
+    await room.save();
 
     res.status(201).json({
       success: true,

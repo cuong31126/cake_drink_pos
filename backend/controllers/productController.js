@@ -169,6 +169,28 @@ const createCategory = async (req, res, next) => {
   }
 };
 
+const toggleProductStatus = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const product = await Product.findById(id);
+    if (!product) {
+      res.status(404);
+      throw new Error('Không tìm thấy sản phẩm.');
+    }
+
+    product.status = product.status === 'selling' ? 'out_of_stock' : 'selling';
+    const updatedProduct = await product.save();
+
+    res.status(200).json({
+      success: true,
+      message: `Đã cập nhật trạng thái món ăn thành công sang: ${product.status === 'selling' ? 'Đang bán' : 'Hết hàng'}`,
+      data: updatedProduct
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   getProducts,
   getProductById,
@@ -176,6 +198,7 @@ module.exports = {
   updateProduct,
   deleteProduct,
   updateProductStock,
+  toggleProductStatus,
   getCategories,
   createCategory
 };

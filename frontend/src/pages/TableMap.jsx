@@ -30,11 +30,9 @@ const TableMap = () => {
       return;
     }
 
-    // 3. Nếu tài khoản đăng nhập là Khách hàng (role: 'user'), họ không được phép xem sơ đồ bàn của quầy POS.
-    // Chúng ta tự động chuyển hướng họ về trang chọn dịch vụ hoặc hiển thị cảnh báo.
+    // 3. Nếu tài khoản đăng nhập là Khách hàng (role: 'user'), họ được định hướng sang Menu đặt hàng
     if (userRole === 'user') {
-      alert("Tài khoản Khách hàng không có quyền truy cập sơ đồ bàn ăn POS!");
-      navigate('/');
+      navigate('/menu?type=take-away', { replace: true });
       return;
     }
 
@@ -55,7 +53,6 @@ const TableMap = () => {
       }
     } catch (err) {
       console.error("Lỗi tải sơ đồ phòng bàn:", err);
-      // Ghi nhận thông báo lỗi để hiển thị lên giao diện thay vì để màn hình trống trơn
       setErrorMsg(err.response?.data?.message || "Không có quyền truy cập hoặc lỗi kết nối máy chủ.");
     } finally {
       setLoading(false);
@@ -63,20 +60,16 @@ const TableMap = () => {
   };
 
   const handleTableClick = async (table) => {
-    // 1. NẾU BÀN CÓ KHÁCH (OCCUPIED): Chuyển thẳng sang trang Order Menu kèm theo thông tin đơn hiện tại
-    if (table.status === 'occupied') {
-      navigate(`/menu?type=dine-in&tableId=${table._id}&orderId=${table.current_order_id}`);
+    const targetTableId = table._id || table.id;
+
+    // 1. NẾU BÀN ĐANG CÓ KHÁCH (OCCUPIED): Chuyển thẳng sang trang Order Menu kèm theo thông tin đơn hiện tại
+    if (table.status === 'occupied' && table.current_order_id) {
+      navigate(`/menu?type=dine-in&tableId=${targetTableId}&orderId=${table.current_order_id}`);
       return;
     }
 
-    // 2. NẾU BÀN TRỐNG (AVAILABLE): Hiển thị hộp thoại xác nhận mở bàn
-    const confirmOpen = window.confirm(`Bạn có chắc chắn muốn mở ${table.table_number}?`);
-    if (!confirmOpen) return;
-
+    // 2. NẾU BÀN TRỐNG (AVAILABLE): Mở bàn ăn và khởi tạo đơn hàng ngay lập tức
     try {
-      const targetTableId = table._id || table.id;
-      
-      // Gửi yêu cầu mở bàn với store_id là chi nhánh đang được chọn hiển thị trên sơ đồ
       const res = await API.post('/orders/dine-in', {
         table_id: targetTableId,
         tableId: targetTableId,
@@ -86,7 +79,8 @@ const TableMap = () => {
       });
 
       if (res.data.success) {
-        navigate(`/menu?type=dine-in&tableId=${targetTableId}&orderId=${res.data.data._id || res.data.data.id}`);
+        const newOrderId = res.data.data._id || res.data.data.id;
+        navigate(`/menu?type=dine-in&tableId=${targetTableId}&orderId=${newOrderId}`);
       }
     } catch (err) {
       alert(err.response?.data?.message || "Không thể khởi tạo hóa đơn tại bàn này.");
@@ -142,45 +136,39 @@ const TableMap = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6 pt-24 animate-in fade-in duration-300">
+    <div className="min-h-screen transition-colors duration-300 bg-gray-50 dark:bg-slate-950 text-gray-800 dark:text-slate-100 p-6 pt-24 animate-in fade-in duration-300">
       {/* Thanh Header Tiêu đề Sơ đồ Bàn */}
-      <div className="max-w-7xl mx-auto flex justify-between items-center border-b pb-4 mb-6">
+      <div className="max-w-7xl mx-auto flex justify-between items-center border-b border-gray-200 dark:border-slate-800 pb-4 mb-6">
         <div>
-          <h1 className="text-xl font-black text-gray-800 uppercase tracking-wide">Sơ đồ phòng bàn</h1>
+          <h1 className="text-xl font-black text-gray-800 dark:text-slate-100 uppercase tracking-wide">Sơ đồ phòng bàn</h1>
           
           {/* 🏢 CHỨC NĂNG MỚI DÀNH CHO ADMIN: Dropdown chuyển đổi chi nhánh trực tiếp trên sơ đồ */}
           {userRole === 'admin' ? (
             <div className="flex items-center space-x-2 mt-1">
-              <span className="text-xs text-gray-400 font-bold">Xem chi nhánh:</span>
+              <span className="text-xs text-gray-400 dark:text-slate-400 font-bold">Xem chi nhánh:</span>
               <select
                 value={selectedStoreId}
                 onChange={(e) => {
                   setSelectedStoreId(e.target.value);
                   localStorage.setItem('storeId', e.target.value); // Lưu lại chi nhánh đang chọn vào máy để đồng bộ
                 }}
-                className="text-xs font-black text-blue-700 bg-white border border-blue-200 rounded-lg px-2 py-1 focus:outline-none cursor-pointer hover:bg-blue-50/50 transition-colors shadow-2xs"
+                className="text-xs font-black text-blue-700 dark:text-blue-400 bg-white dark:bg-slate-800 border border-blue-200 dark:border-slate-700 rounded-lg px-2 py-1 focus:outline-none cursor-pointer hover:bg-blue-50/50 dark:hover:bg-slate-700 transition-colors shadow-2xs"
               >
                 <option value="store_Q1">Chi nhánh Quận 1</option>
                 <option value="store_ThuDuc">Chi nhánh Thủ Đức</option>
               </select>
             </div>
           ) : (
-            <p className="text-xs text-gray-400">
-              Chi nhánh quản lý: <span className="font-bold text-blue-600 uppercase">{getFriendlyStoreLabel(selectedStoreId)}</span>
+            <p className="text-xs text-gray-400 dark:text-slate-400">
+              Chi nhánh quản lý: <span className="font-bold text-blue-600 dark:text-blue-400 uppercase">{getFriendlyStoreLabel(selectedStoreId)}</span>
             </p>
           )}
         </div>
         
         <div className="flex items-center space-x-2">
           <button 
-            onClick={() => navigate('/bills')} 
-            className="px-4 py-2 bg-white hover:bg-gray-50 border rounded-xl text-xs font-bold text-gray-700 shadow-2xs transition-all"
-          >
-            📋 Xem Danh Sách Hóa Đơn
-          </button>
-          <button 
             onClick={() => fetchTables(selectedStoreId)} 
-            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-2xs transition-all"
+            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-2xs transition-all cursor-pointer"
           >
             🔄 Tải lại sơ đồ
           </button>
@@ -195,12 +183,12 @@ const TableMap = () => {
             onClick={() => handleTableClick(table)}
             className={`p-6 rounded-2xl border text-center font-black text-sm tracking-wide shadow-2xs transition-all active:scale-95 duration-150 flex flex-col items-center justify-center space-y-1 ${
               table.status === 'occupied'
-                ? 'bg-red-50 text-red-600 border-red-200 hover:bg-red-100/70'
-                : 'bg-green-50 text-green-600 border-green-200 hover:bg-green-100/70'
+                ? 'bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-400 border-red-200 dark:border-red-900/50 hover:bg-red-100/70 dark:hover:bg-red-900/60'
+                : 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-900/50 hover:bg-emerald-100/70 dark:hover:bg-emerald-900/60'
             }`}
           >
             <span className="text-base">{table.table_number}</span>
-            <span className="text-[10px] font-bold uppercase tracking-wider opacity-60">
+            <span className="text-[10px] font-bold uppercase tracking-wider opacity-80">
               {table.status === 'occupied' ? 'Đang có khách' : 'Bàn trống'}
             </span>
           </button>
