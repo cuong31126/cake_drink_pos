@@ -685,22 +685,16 @@ const AdminDashboard = () => {
                         </select>
                       </td>
                       <td className="p-4 text-center">
-                        <div className="flex flex-col sm:flex-row items-center justify-center gap-1.5">
-                          {u.role === 'staff' && (
-                            <button
-                              onClick={() => handleUpdatePinSubmit(u._id, u.pin)}
-                              className="px-2.5 py-1 bg-amber-50 dark:bg-amber-950/60 hover:bg-amber-100 dark:hover:bg-amber-900/60 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800 font-mono font-bold text-xs rounded-lg transition-colors cursor-pointer whitespace-nowrap"
-                            >
-                              🔑 {u.pin || '123456'} (PIN)
-                            </button>
-                          )}
+                        {u.role === 'staff' ? (
                           <button
-                            onClick={() => handleUpdatePasswordSubmit(u._id, u.name || u.email)}
-                            className="px-2.5 py-1 bg-blue-50 dark:bg-blue-950/60 hover:bg-blue-100 dark:hover:bg-blue-900/60 text-blue-800 dark:text-blue-300 border border-blue-200 dark:border-blue-800 font-bold text-xs rounded-lg transition-colors cursor-pointer whitespace-nowrap"
+                            onClick={() => handleUpdatePinSubmit(u._id, u.pin)}
+                            className="px-2.5 py-1 bg-amber-50 dark:bg-amber-950/60 hover:bg-amber-100 dark:hover:bg-amber-900/60 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800 font-mono font-bold text-xs rounded-lg transition-colors cursor-pointer whitespace-nowrap"
                           >
-                            🔐 Đổi Mật Khẩu
+                            🔑 {u.pin || '123456'} (PIN)
                           </button>
-                        </div>
+                        ) : (
+                          <span className="text-gray-400 dark:text-slate-600 text-xs italic">-</span>
+                        )}
                       </td>
                       <td className="p-4 text-center">
                         <div className="flex items-center justify-center space-x-2">
