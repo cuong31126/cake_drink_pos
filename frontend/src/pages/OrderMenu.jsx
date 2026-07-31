@@ -24,6 +24,7 @@ const OrderMenu = () => {
     const [showDraftBill, setShowDraftBill] = useState(false);
     const [showCartDrawer, setShowCartDrawer] = useState(false); // 💡 MẶC ĐỊNH ẨN KHUNG GIỎ HÀNG THUỘC TÍNH (Chỉ hiện khi bấm đặt thực đơn)
     const [qrUrl, setQrUrl] = useState('');
+    const [payosCheckoutUrl, setPayosCheckoutUrl] = useState(null);
     const [isOrderConfirmed, setIsOrderConfirmed] = useState(false);
     const [isSubmitted, setIsSubmitted] = useState(false);
 
@@ -386,7 +387,7 @@ const OrderMenu = () => {
     };
 
     // Bắt đầu quy trình thanh toán QR
-    const handleOpenPaymentModal = () => {
+    const handleOpenPaymentModal = async () => {
         if (cart.length === 0) {
             toast.error("Giỏ hàng đang trống! Vui lòng chọn ít nhất 1 món ăn.");
             return;
@@ -395,7 +396,20 @@ const OrderMenu = () => {
         const addInfo = encodeURIComponent(`Thanh Toan Don ${orderId ? orderId.slice(-6).toUpperCase() : 'Moi'}`);
         const generatedQr = `https://img.vietqr.io/image/${BANK_BIN}-${ACCOUNT_NUMBER}-compact2.png?amount=${total}&addInfo=${addInfo}&accountName=${encodeURIComponent(ACCOUNT_NAME)}`;
         setQrUrl(generatedQr);
+        setPayosCheckoutUrl(null);
         setShowPayModal(true);
+
+        if (orderId) {
+            try {
+                const res = await API.post(`/orders/${orderId}/payos-link`);
+                if (res.data.success) {
+                    if (res.data.data?.qrCode) setQrUrl(res.data.data.qrCode);
+                    if (res.data.data?.checkoutUrl) setPayosCheckoutUrl(res.data.data.checkoutUrl);
+                }
+            } catch (e) {
+                console.warn("PayOS Link error:", e);
+            }
+        }
     };
 
     // Lọc danh sách món ăn
@@ -847,6 +861,17 @@ const OrderMenu = () => {
                                     className="w-56 h-56 object-contain rounded-xl"
                                 />
                             </div>
+
+                            {payosCheckoutUrl && (
+                                <a
+                                    href={payosCheckoutUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="w-full mb-3 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs transition-all shadow-md cursor-pointer flex items-center justify-center space-x-1"
+                                >
+                                    <span>🔗 Mở Cổng Thanh Toán PayOS Chính Thức</span>
+                                </a>
+                            )}
 
                             <div className="w-full bg-gray-50 dark:bg-slate-800 rounded-xl p-4 border border-gray-100 dark:border-slate-700 space-y-2 text-sm">
                                 <div className="flex justify-between">

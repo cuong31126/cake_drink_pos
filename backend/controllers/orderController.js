@@ -2,6 +2,7 @@ const Order = require('../models/Order');
 const Table = require('../models/Table');
 const Product = require('../models/Product');
 const Notification = require('../models/Notification');
+const payos = require('../config/payos');
 
 // 💡 CÔNG TẮC TẮT/BẬT TỰ ĐỘNG TRỪ TỒN KHO KHI TEST ĐƠN HÀNG:
 // - Đặt false: Tắt tự động trừ tồn kho
@@ -631,6 +632,66 @@ const deleteOrder = async (req, res, next) => {
   }
 };
 
+/**
+ * @desc    Tạo mã QR / Link thanh toán chính thức qua SDK PayOS (createPaymentLink)
+ * @route   POST /api/v1/orders/:id/payos-link
+ * @access  Private (Mọi người dùng đã đăng nhập)
+ */
+const createPayOSPaymentLink = async (req, res, next) => {
+  try {
+    const orderId = req.params.id;
+    const order = await Order.findById(orderId);
+    if (!order) {
+      res.status(404);
+      throw new Error('Không tìm thấy đơn hàng.');
+    }
+
+    const numericPart = parseInt(order._id.replace(/\D/g, '').slice(-6)) || 0;
+    const orderCode = Number(`${Date.now().toString().slice(-6)}${numericPart.toString().padStart(3, '0').slice(-3)}`) || Number(Date.now().toString().slice(-9));
+
+    const origin = req.headers.origin || 'https://cake-drink-pos.vercel.app';
+    const descriptionStr = `Thanh Toan Don ${order._id.slice(-6).toUpperCase()}`.slice(0, 25);
+
+    const paymentData = {
+      orderCode,
+      amount: Math.max(Number(order.final_total) || 1000, 1000),
+      description: descriptionStr,
+      items: (order.items || []).map(item => ({
+        name: item.name ? item.name.slice(0, 50) : 'Mon An',
+        quantity: Number(item.quantity) || 1,
+        price: Number(item.price) || 0
+      })),
+      cancelUrl: `${origin}/queue`,
+      returnUrl: `${origin}/queue`
+    };
+
+    let paymentLinkResponse = null;
+    try {
+      if (payos && payos.createPaymentLink) {
+        paymentLinkResponse = await payos.createPaymentLink(paymentData);
+      }
+    } catch (payosErr) {
+      console.warn(`[PayOS SDK Warning]: ${payosErr.message}`);
+    }
+
+    order.payos_order_code = orderCode;
+    order.payment_method = 'payos';
+    await order.save();
+
+    res.status(200).json({
+      success: true,
+      data: {
+        orderCode,
+        checkoutUrl: paymentLinkResponse?.checkoutUrl || null,
+        qrCode: paymentLinkResponse?.qrCode || null,
+        paymentLinkData: paymentLinkResponse
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = { 
   createDineInOrder,
   createTakeAwayOrder,
@@ -645,5 +706,6 @@ module.exports = {
   acceptOrder,
   readyOrder,
   confirmOrder,
-  deleteOrder
+  deleteOrder,
+  createPayOSPaymentLink
 };

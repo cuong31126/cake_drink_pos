@@ -60,7 +60,8 @@ const {
   acceptOrder,
   readyOrder,
   confirmOrder,
-  deleteOrder
+  deleteOrder,
+  createPayOSPaymentLink
 } = require('../controllers/orderController');
 
 const {
@@ -167,6 +168,7 @@ router.get('/orders/:id/print-draft', protect, authorize('admin', 'staff'), prin
 router.post('/orders/:id/accept', protect, authorize('admin', 'staff'), acceptOrder);
 router.post('/orders/:id/ready', protect, authorize('admin', 'staff'), readyOrder);
 router.post('/orders/:id/confirm', protect, confirmOrder);
+router.post('/orders/:id/payos-link', protect, createPayOSPaymentLink);
 router.delete('/orders/:id', protect, authorize('admin'), deleteOrder);
 
 // ==========================================

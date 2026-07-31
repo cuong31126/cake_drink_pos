@@ -119,6 +119,10 @@ const orderSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
+  payos_order_code: {
+    type: Number,
+    default: null
+  },
   cancelled_items: [cancelledItemSchema]
 }, {
   timestamps: true

@@ -32,6 +32,21 @@ const MyOrders = () => {
     }
   };
 
+  const [myOrdersPayosData, setMyOrdersPayosData] = useState(null);
+
+  useEffect(() => {
+    if (selectedOrder?._id && selectedOrder?.payment_status !== 'paid') {
+      setMyOrdersPayosData(null);
+      API.post(`/orders/${selectedOrder._id}/payos-link`)
+        .then(res => {
+          if (res.data.success) {
+            setMyOrdersPayosData(res.data.data);
+          }
+        })
+        .catch(err => console.warn("PayOS MyOrders error:", err));
+    }
+  }, [selectedOrder?._id, selectedOrder?.payment_status]);
+
   // Tự động kiểm tra trạng thái thanh toán real-time khi đang xem Modal Hóa Đơn / QR (tối đa 3 phút)
   useEffect(() => {
     let intervalId;
@@ -329,11 +344,22 @@ const MyOrders = () => {
 
                   <div className="bg-white p-2.5 rounded-xl shadow-md border border-slate-200">
                     <img
-                      src={getQRUrl(selectedOrder)}
+                      src={myOrdersPayosData?.qrCode || getQRUrl(selectedOrder)}
                       alt="PayOS VietQR"
                       className="w-48 h-48 object-contain"
                     />
                   </div>
+
+                  {myOrdersPayosData?.checkoutUrl && (
+                    <a
+                      href={myOrdersPayosData.checkoutUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="w-full py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs transition-all shadow-md cursor-pointer flex items-center justify-center space-x-1"
+                    >
+                      <span>🔗 Mở Cổng Thanh Toán PayOS Chính Thức</span>
+                    </a>
+                  )}
 
                   <div className="w-full text-[11px] space-y-1 bg-white dark:bg-slate-900 p-3 rounded-xl border border-amber-200 dark:border-amber-900/30">
                     <div className="flex justify-between">

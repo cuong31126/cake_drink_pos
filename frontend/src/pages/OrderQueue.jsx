@@ -27,6 +27,23 @@ const OrderQueue = () => {
     const [settleModalOrder, setSettleModalOrder] = useState(null);
     const [qrVerifyingOrder, setQrVerifyingOrder] = useState(null);
     const [isVerifyingPayOS, setIsVerifyingPayOS] = useState(false);
+    const [payosLinkData, setPayosLinkData] = useState(null);
+
+    // 💳 TỰ ĐỘNG GỌI API SDK PAYOS ĐỂ KHỞI TẠO PAYMENT LINK CHÍNH THỨC
+    useEffect(() => {
+        if (qrVerifyingOrder?._id) {
+            setPayosLinkData(null);
+            API.post(`/orders/${qrVerifyingOrder._id}/payos-link`)
+                .then(res => {
+                    if (res.data.success) {
+                        setPayosLinkData(res.data.data);
+                    }
+                })
+                .catch(err => {
+                    console.warn("Lỗi gọi SDK PayOS createPaymentLink:", err);
+                });
+        }
+    }, [qrVerifyingOrder?._id]);
 
     // 🟢 MỞ CA MODAL STATE
     const [showOpenShiftModal, setShowOpenShiftModal] = useState(false);
@@ -1146,21 +1163,38 @@ const OrderQueue = () => {
                             </button>
                         </div>
 
-                        {/* Mã QR VietQR */}
+                        {/* Mã QR VietQR / PayOS SDK */}
                         <div className="flex flex-col items-center space-y-3">
                             <div className="p-2.5 bg-white rounded-xl shadow-md border border-slate-200">
                                 <img
-                                    src={`https://img.vietqr.io/image/${BANK_BIN}-${ACCOUNT_NUMBER}-compact2.png?amount=${qrVerifyingOrder.final_total}&addInfo=${encodeURIComponent(`Thanh Toan Don ${qrVerifyingOrder._id.slice(-6).toUpperCase()}`)}&accountName=${encodeURIComponent(ACCOUNT_NAME)}`}
-                                    alt="VietQR Payment Code"
+                                    src={payosLinkData?.qrCode || `https://img.vietqr.io/image/${BANK_BIN}-${ACCOUNT_NUMBER}-compact2.png?amount=${qrVerifyingOrder.final_total}&addInfo=${encodeURIComponent(`Thanh Toan Don ${qrVerifyingOrder._id.slice(-6).toUpperCase()}`)}&accountName=${encodeURIComponent(ACCOUNT_NAME)}`}
+                                    alt="VietQR / PayOS Payment Code"
                                     className="w-48 h-48 object-contain"
                                 />
                             </div>
+
+                            {payosLinkData?.checkoutUrl && (
+                                <a
+                                    href={payosLinkData.checkoutUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="w-full py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs transition-all shadow-md cursor-pointer flex items-center justify-center space-x-1 border border-emerald-400/40"
+                                >
+                                    <span>🔗 Mở Cổng Thanh Toán PayOS Chính Thức</span>
+                                </a>
+                            )}
 
                             <div className="w-full bg-slate-900/80 p-3 rounded-xl border border-slate-700 space-y-1.5 text-xs">
                                 <div className="flex justify-between">
                                     <span className="text-slate-400">Số tiền:</span>
                                     <span className="font-black text-emerald-400 text-sm">{qrVerifyingOrder.final_total.toLocaleString()} VNĐ</span>
                                 </div>
+                                {payosLinkData?.orderCode && (
+                                    <div className="flex justify-between">
+                                        <span className="text-slate-400">Mã PayOS OrderCode:</span>
+                                        <span className="font-mono font-bold text-amber-400">{payosLinkData.orderCode}</span>
+                                    </div>
+                                )}
                                 <div className="flex justify-between">
                                     <span className="text-slate-400">Nội dung CK:</span>
                                     <span className="font-bold text-purple-300">Thanh Toan Don {qrVerifyingOrder._id.slice(-6).toUpperCase()}</span>

@@ -66,7 +66,14 @@ const handlePayOSWebhook = async (req, res, next) => {
         .sort({ createdAt: -1 })
         .limit(50);
 
+      const incomingOrderCode = webhookData?.orderCode || webhookBody?.data?.orderCode || webhookBody?.orderCode;
+
       let matchedOrder = recentUnpaidOrders.find(order => {
+        // A. Khớp theo orderCode của SDK PayOS
+        if (incomingOrderCode && order.payos_order_code && Number(order.payos_order_code) === Number(incomingOrderCode)) {
+          return true;
+        }
+        // B. Khớp theo mã Hex đuôi 6 ký tự trong nội dung chuyển khoản
         const orderIdStr = order._id.toString().toLowerCase();
         return hexTokens.some(token => orderIdStr.endsWith(token.toLowerCase()));
       });
