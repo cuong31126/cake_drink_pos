@@ -425,22 +425,19 @@ const OrderMenu = () => {
                         <h2 className="text-base sm:text-xl font-black text-gray-800 dark:text-slate-100 uppercase tracking-wide">
                             Menu ({orderType === 'dine-in' ? `Bàn ${tableId || 'Chưa chọn'}` : 'Mang đi'})
                         </h2>
-                        {userRole === 'admin' && orderType === 'take-away' && (
+                        {/* 🏢 BỘ CHỌN CHI NHÁNH CỬA HÀNG FLEXIBLE CHO KHÁCH & ADMIN/STAFF */}
+                        <div className="flex items-center space-x-1.5 bg-white dark:bg-slate-800 border border-purple-200 dark:border-purple-800/60 rounded-xl px-2.5 py-1 text-xs shadow-2xs">
+                            <span className="text-[11px] font-bold text-purple-600 dark:text-purple-400">📍 Chi nhánh:</span>
                             <select
                                 value={selectedStore}
                                 onChange={(e) => setSelectedStore(e.target.value)}
-                                className="bg-white dark:bg-slate-800 border border-purple-200 dark:border-purple-800/50 rounded-xl px-2.5 py-1 text-xs font-bold text-purple-700 dark:text-purple-300 focus:outline-none cursor-pointer shadow-sm"
+                                className="bg-transparent text-gray-800 dark:text-slate-100 font-bold focus:outline-none cursor-pointer text-xs"
                             >
                                 {BRANCHES.map(b => (
-                                    <option key={b.id} value={b.id}>{b.label}</option>
+                                    <option key={b.id} value={b.id} className="dark:bg-slate-900">{b.label}</option>
                                 ))}
                             </select>
-                        )}
-                        {userRole === 'staff' && orderType === 'take-away' && (
-                            <span className="text-[10px] font-bold bg-blue-50 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800 px-2 py-1 rounded-lg">
-                                📍 {getBranchLabel(selectedStore)}
-                            </span>
-                        )}
+                        </div>
                     </div>
 
                     {/* Nút bật nhanh Khung Giỏ Hàng khi bị ẩn */}
