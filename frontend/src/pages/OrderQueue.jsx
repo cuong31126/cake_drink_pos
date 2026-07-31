@@ -322,6 +322,35 @@ const OrderQueue = () => {
         } finally {
             setIsVerifyingPayOS(false);
         }
+    // 🧪 HÀM GIẢ LẬP THANH TOÁN THÀNH CÔNG DÀNH CHO LOCALHOST DEV/TESTER
+    const handleSimulateLocalWebhook = async (order) => {
+        if (!order) return;
+        try {
+            setIsVerifyingPayOS(true);
+            // Gửi Webhook giả lập tới Backend local
+            const res = await API.post('/webhooks/payos', {
+                code: "00",
+                desc: "success",
+                success: true,
+                data: {
+                    accountNumber: ACCOUNT_NUMBER,
+                    amount: order.final_total,
+                    description: `Thanh Toan Don ${order._id.slice(-6).toUpperCase()}`,
+                    reference: `TEST_LOCAL_${Date.now()}`
+                }
+            });
+
+            if (res.data.success) {
+                toast.success(`🎉 GIẢ LẬP LOCAL THÀNH CÔNG: Đơn #${order._id.slice(-6).toUpperCase()} đã được gạch nợ thành công!`);
+                await handleSettleOrder(order._id, 'payos');
+                setQrVerifyingOrder(null);
+                setSettleModalOrder(null);
+            }
+        } catch (err) {
+            alert(err.response?.data?.message || "Lỗi khi chạy thử nghiệm giả lập Webhook.");
+        } finally {
+            setIsVerifyingPayOS(false);
+        }
     };
 
     const handleCancelOrder = async (orderId) => {
@@ -1145,9 +1174,19 @@ const OrderQueue = () => {
                                 <span>{isVerifyingPayOS ? '⏳ Đang kiểm tra API PayOS...' : '🔄 Kiểm tra tự động API PayOS (Check tiền về DB)'}</span>
                             </button>
 
+                            {/* 🧪 NÚT GIẢ LẬP TEST 1-CLICK DÀNH CHO LOCALHOST DEV */}
+                            <button
+                                type="button"
+                                disabled={isVerifyingPayOS}
+                                onClick={() => handleSimulateLocalWebhook(qrVerifyingOrder)}
+                                className="w-full py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold rounded-xl text-xs transition-all shadow-sm cursor-pointer text-center flex items-center justify-center space-x-1.5 border border-emerald-400/30"
+                            >
+                                <span>🧪 Giả Lập Khách Chuyển Tiền Test (Local 1-Click)</span>
+                            </button>
+
                             <button
                                 onClick={() => setQrVerifyingOrder(null)}
-                                className="w-full py-2.5 bg-slate-700 hover:bg-slate-600 text-slate-300 font-bold rounded-xl text-xs transition-colors cursor-pointer text-center"
+                                className="w-full py-2 bg-slate-700 hover:bg-slate-600 text-slate-300 font-bold rounded-xl text-xs transition-colors cursor-pointer text-center"
                             >
                                 Quay lại
                             </button>
