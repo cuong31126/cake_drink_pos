@@ -12,11 +12,23 @@ const payos = new PayOS({
 });
 
 /**
+ * 🟢 GET /api/webhooks/payos & GET /api/webhooks
+ * Giúp PayOS Dashboard xác minh đường dẫn Webhook tồn tại (Trả về HTTP 200 OK)
+ */
+router.get(['/payos', '/'], (req, res) => {
+  return res.status(200).json({
+    success: true,
+    status: 'active',
+    message: 'PayOS Webhook Endpoint đang hoạt động sẵn sàng nhận dữ liệu.'
+  });
+});
+
+/**
  * @desc    API xử lý tín hiệu Webhook tự động nhận biết tiền về từ PayOS (API số 28)
- * @route   POST /api/webhooks/payos
+ * @route   POST /api/webhooks/payos và POST /api/webhooks
  * @access  Public (Cổng thanh toán gọi trực tiếp)
  */
-router.post('/payos', async (req, res, next) => {
+const handlePayOSWebhook = async (req, res, next) => {
   try {
     const webhookBody = req.body;
     let webhookData = webhookBody.data || webhookBody;
@@ -39,33 +51,43 @@ router.post('/payos', async (req, res, next) => {
     const isSuccess = webhookBody.success === true || webhookData.code === '00';
 
     if (isSuccess || description) {
-      // Trích xuất 6 ký tự cuối của mã đơn hàng (Ví dụ: "Thanh toan don 900da9")
-      const match = description.match(/Thanh\s*toan\s*don\s*([a-f0-9]{6})/i);
+      // 1. Chuẩn hóa và khử toàn bộ dấu tiếng Việt (Ví dụ: "Thanh toán đơn" -> "thanh toan don")
+      const cleanDesc = (description || '')
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLowerCase();
 
-      if (match) {
-        const partialId = match[1].toLowerCase();
+      // 2. Tìm tất cả các mã Hex 6 ký tự hoặc 24 ký tự xuất hiện trong nội dung chuyển khoản
+      const hexTokens = cleanDesc.match(/[a-f0-9]{24}|[a-f0-9]{6}/gi) || [];
 
-        // 3. Tìm kiếm đơn hàng tương ứng có ID kết thúc bằng partialId
+      let matchedOrder = null;
+
+      for (const token of hexTokens) {
         const order = await Order.findOne({
-          _id: { $regex: new RegExp(partialId + '$', 'i') }
+          _id: { $regex: new RegExp(token + '$', 'i') }
         });
 
-        if (order && order.payment_status !== 'paid') {
-          // Cập nhật hóa đơn thành Đã thanh toán và Hoàn thành
-          order.payment_status = 'paid';
-          order.status = 'completed';
-          await order.save();
-
-          // Giải phóng bàn ăn nếu là đơn tại bàn
-          if (order.table_id) {
-            await Table.findByIdAndUpdate(order.table_id, {
-              status: 'available',      // Đổi sang màu xanh trống
-              current_order_id: null    // Ngắt liên kết đơn hàng cũ
-            });
-          }
-
-          console.log(`[Webhook PayOS Success] Đơn hàng #${order._id.slice(-6).toUpperCase()} đã tự động chốt thanh toán và giải phóng bàn.`);
+        if (order) {
+          matchedOrder = order;
+          break;
         }
+      }
+
+      if (matchedOrder && matchedOrder.payment_status !== 'paid') {
+        // Cập nhật hóa đơn thành Đã thanh toán và Hoàn thành
+        matchedOrder.payment_status = 'paid';
+        matchedOrder.status = 'completed';
+        await matchedOrder.save();
+
+        // Giải phóng bàn ăn nếu là đơn tại bàn
+        if (matchedOrder.table_id) {
+          await Table.findByIdAndUpdate(matchedOrder.table_id, {
+            status: 'available',      // Đổi sang màu xanh trống
+            current_order_id: null    // Ngắt liên kết đơn hàng cũ
+          });
+        }
+
+        console.log(`[Webhook PayOS Success] Đơn hàng #${matchedOrder._id.slice(-6).toUpperCase()} đã tự động chốt thanh toán và giải phóng bàn.`);
       }
     }
 
@@ -75,6 +97,9 @@ router.post('/payos', async (req, res, next) => {
     console.error(`[Webhook PayOS Lỗi]: ${error.message}`);
     next(error);
   }
-});
+};
+
+router.post('/payos', handlePayOSWebhook);
+router.post('/', handlePayOSWebhook);
 
 module.exports = router;
