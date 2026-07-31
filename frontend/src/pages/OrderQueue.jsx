@@ -322,6 +322,8 @@ const OrderQueue = () => {
         } finally {
             setIsVerifyingPayOS(false);
         }
+    };
+
     // 🧪 HÀM GIẢ LẬP THANH TOÁN THÀNH CÔNG DÀNH CHO LOCALHOST DEV/TESTER
     const handleSimulateLocalWebhook = async (order) => {
         if (!order) return;
