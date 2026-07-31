@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import API from '../services/api';
+import { useAuth } from '../context/AuthContext';
 
 const AdminDashboard = () => {
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'admin' || localStorage.getItem('userRole') === 'admin';
   const [activeTab, setActiveTab] = useState('overview'); // 'overview' | 'products' | 'users'
 
   // Tab 1: Overview States
@@ -1062,7 +1065,7 @@ const AdminDashboard = () => {
               </div>
 
               <div className="bg-amber-50 dark:bg-amber-950/30 p-3 rounded-xl border border-amber-100 dark:border-amber-900/40 text-[11px] text-amber-800 dark:text-amber-300 font-medium">
-                💡 Lưu ý: {user?.role === 'admin' || localStorage.getItem('userRole') === 'admin' ? <b>👑 Tài khoản Admin có đặc quyền lưu kho trực tiếp không cần nhập PIN.</b> : <span>Hệ thống yêu cầu nhập <b>mã PIN 6 số</b> xác thực của Nhân viên trước khi lưu.</span>}
+                💡 Lưu ý: {isAdmin ? <b>👑 Tài khoản Admin có đặc quyền lưu kho trực tiếp không cần nhập PIN.</b> : <span>Hệ thống yêu cầu nhập <b>mã PIN 6 số</b> xác thực của Nhân viên trước khi lưu.</span>}
               </div>
             </div>
 
@@ -1078,7 +1081,7 @@ const AdminDashboard = () => {
                 type="submit"
                 className="py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-black rounded-xl text-xs transition-all shadow-md cursor-pointer uppercase"
               >
-                {user?.role === 'admin' || localStorage.getItem('userRole') === 'admin' ? '💾 Lưu Kho (Đặc Quyền Admin)' : '🔒 Lưu Kho (Cần PIN 6 số)'}
+                {isAdmin ? '💾 Lưu Kho (Đặc Quyền Admin)' : '🔒 Lưu Kho (Cần PIN 6 số)'}
               </button>
             </div>
           </form>
