@@ -2,14 +2,7 @@ const express = require('express');
 const router = express.Router();
 const Order = require('../models/Order');
 const Table = require('../models/Table');
-const { PayOS } = require('@payos/node');
-
-// Khởi tạo đối tượng PayOS với thông tin cấu hình từ file .env
-const payos = new PayOS({
-  clientId: process.env.PAYOS_CLIENT_ID || '',
-  apiKey: process.env.PAYOS_API_KEY || '',
-  checksumKey: process.env.PAYOS_CHECKSUM_KEY || ''
-});
+const payos = require('../config/payos');
 
 /**
  * 🟢 GET /api/webhooks/payos & GET /api/webhooks
@@ -35,7 +28,7 @@ const handlePayOSWebhook = async (req, res, next) => {
 
     // 1. Kiểm tra tính hợp lệ và chữ ký bảo mật Webhook (Checksum) qua PayOS SDK
     try {
-      if (process.env.PAYOS_CHECKSUM_KEY) {
+      if (process.env.PAYOS_CHECKSUM_KEY && payos.verifyWebhookData) {
         const verifiedData = payos.verifyWebhookData(webhookBody);
         if (verifiedData) {
           webhookData = verifiedData;
@@ -47,8 +40,8 @@ const handlePayOSWebhook = async (req, res, next) => {
     }
 
     // 2. Kiểm tra cờ trạng thái thành công hoặc mô tả nội dung giao dịch
-    const description = webhookData.description || webhookBody.data?.description || '';
-    const isSuccess = webhookBody.success === true || webhookData.code === '00';
+    const description = webhookData?.description || webhookBody?.data?.description || webhookBody?.description || '';
+    const isSuccess = webhookBody?.success === true || webhookData?.code === '00' || webhookBody?.code === '00';
 
     if (isSuccess || description) {
       // 1. Chuẩn hóa và khử toàn bộ dấu tiếng Việt (Ví dụ: "Thanh toán đơn" -> "thanh toan don")
@@ -60,18 +53,15 @@ const handlePayOSWebhook = async (req, res, next) => {
       // 2. Tìm tất cả các mã Hex 6 ký tự hoặc 24 ký tự xuất hiện trong nội dung chuyển khoản
       const hexTokens = cleanDesc.match(/[a-f0-9]{24}|[a-f0-9]{6}/gi) || [];
 
-      let matchedOrder = null;
+      // 3. Lấy danh sách các đơn hàng chưa thanh toán gần nhất từ MongoDB Atlas
+      const recentUnpaidOrders = await Order.find({ payment_status: { $ne: 'paid' } })
+        .sort({ createdAt: -1 })
+        .limit(50);
 
-      for (const token of hexTokens) {
-        const order = await Order.findOne({
-          _id: { $regex: new RegExp(token + '$', 'i') }
-        });
-
-        if (order) {
-          matchedOrder = order;
-          break;
-        }
-      }
+      let matchedOrder = recentUnpaidOrders.find(order => {
+        const orderIdStr = order._id.toString().toLowerCase();
+        return hexTokens.some(token => orderIdStr.endsWith(token.toLowerCase()));
+      });
 
       if (matchedOrder && matchedOrder.payment_status !== 'paid') {
         // Cập nhật hóa đơn thành Đã thanh toán và Hoàn thành
