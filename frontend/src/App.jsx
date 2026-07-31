@@ -11,6 +11,7 @@ import OrderQueue from './pages/OrderQueue';
 import { AuthProvider } from './context/AuthContext';
 import { ThemeProvider, useTheme } from './context/ThemeContext';
 
+import { Toaster } from 'react-hot-toast';
 import MyOrders from './pages/MyOrders';
 
 const RootElement = () => {
@@ -29,6 +30,7 @@ const AppContent = () => {
     <div className={`min-h-screen transition-colors duration-300 ${
       isDarkMode ? 'bg-slate-950 text-slate-100 dark' : 'bg-slate-50 text-slate-900'
     }`}>
+      <Toaster position="top-right" reverseOrder={false} />
       {window.location.pathname !== '/login' && (
         <Topbar openChatModal={() => navigate('/chat')} />
       )}

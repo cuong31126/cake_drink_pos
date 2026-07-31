@@ -182,7 +182,7 @@ const Topbar = ({ openChatModal, toggleCartDrawer }) => {
   return (
     <>
       {/* 🖥️ TOPBAR CHÍNH GỌN GÀNG VÀ CHUYÊN NGHIỆP */}
-      <div className="h-16 bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-800 px-6 flex items-center justify-between fixed top-0 left-0 right-0 z-50 font-sans shadow-2xs text-gray-800 dark:text-slate-100 transition-colors duration-300">
+      <div className="h-16 bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-800 px-3 sm:px-6 flex items-center justify-between fixed top-0 left-0 right-0 z-50 font-sans shadow-2xs text-gray-800 dark:text-slate-100 transition-colors duration-300 overflow-x-auto max-w-full gap-2">
         {/* Góc trái: Vai trò, tên người dùng, chi nhánh */}
         <div className="flex items-center space-x-4">
           <div className="flex items-center space-x-2">
@@ -321,16 +321,16 @@ const Topbar = ({ openChatModal, toggleCartDrawer }) => {
 
       {/* 🟢 SUB-HEADER BAR BÊN DƯỚI TOPBAR DÀNH RIÊNG CHO KHÁCH HÀNG (USER) */}
       {userRole === 'user' && (
-        <div className="bg-white dark:bg-slate-900 text-slate-800 dark:text-white px-6 py-2.5 fixed top-16 left-0 right-0 z-40 flex items-center justify-between border-b border-gray-200 dark:border-slate-800 shadow-sm transition-colors duration-300">
-          <div className="flex items-center space-x-2">
-            <span className="text-amber-600 dark:text-amber-400 font-black text-xs uppercase tracking-wider">🍰 TIỆM BÁNH & NƯỚC UỐNG POS</span>
-            <span className="text-[10px] bg-gray-100 dark:bg-slate-800 text-gray-500 dark:text-slate-400 px-2 py-0.5 rounded-full border border-gray-200 dark:border-slate-700">Giao diện Khách hàng</span>
+        <div className="bg-white dark:bg-slate-900 text-slate-800 dark:text-white px-3 sm:px-6 py-2 fixed top-16 left-0 right-0 z-40 flex items-center justify-between border-b border-gray-200 dark:border-slate-800 shadow-sm transition-colors duration-300 overflow-x-auto max-w-full gap-2 text-xs">
+          <div className="flex items-center space-x-2 shrink-0">
+            <span className="text-amber-600 dark:text-amber-400 font-black text-xs uppercase tracking-wider whitespace-nowrap">🍰 SWEET BAKERY</span>
+            <span className="hidden md:inline-block text-[10px] bg-gray-100 dark:bg-slate-800 text-gray-500 dark:text-slate-400 px-2 py-0.5 rounded-full border border-gray-200 dark:border-slate-700 whitespace-nowrap">Giao diện Khách hàng</span>
           </div>
 
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center space-x-1.5 sm:space-x-3 shrink-0">
             {/* 🏪 CHỌN CHI NHÁNH CỬA HÀNG ĐẶT MÓN */}
-            <div className="flex items-center space-x-1.5 text-xs bg-gray-100 dark:bg-slate-800 px-3 py-1 rounded-xl border border-gray-200 dark:border-slate-700">
-              <span className="text-gray-500 dark:text-slate-400 font-bold">🏪 Đặt tại:</span>
+            <div className="flex items-center space-x-1 text-xs bg-gray-100 dark:bg-slate-800 px-2 py-1 rounded-xl border border-gray-200 dark:border-slate-700 whitespace-nowrap">
+              <span className="text-gray-500 dark:text-slate-400 font-bold hidden sm:inline">🏪 Đặt tại:</span>
               <select
                 value={localStorage.getItem('storeId') || 'store_Q1'}
                 onChange={(e) => {
@@ -339,8 +339,8 @@ const Topbar = ({ openChatModal, toggleCartDrawer }) => {
                 }}
                 className="bg-transparent text-amber-700 dark:text-amber-300 font-black text-xs focus:outline-none cursor-pointer"
               >
-                <option value="store_Q1">Chi nhánh 1 - Quận 1</option>
-                <option value="store_ThuDuc">Chi nhánh 2 - Thủ Đức</option>
+                <option value="store_Q1">Q1</option>
+                <option value="store_ThuDuc">Thủ Đức</option>
               </select>
             </div>
 
@@ -349,10 +349,10 @@ const Topbar = ({ openChatModal, toggleCartDrawer }) => {
               onClick={() => {
                 window.location.href = '/menu?type=take-away&newOrder=true';
               }}
-              className="px-4 py-1.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-white font-black text-xs rounded-xl shadow-md transition-all cursor-pointer flex items-center space-x-1.5 border border-amber-300/40"
+              className="px-2 sm:px-3.5 py-1.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-white font-black text-xs rounded-xl shadow-md transition-all cursor-pointer flex items-center space-x-1 border border-amber-300/40 whitespace-nowrap shrink-0"
             >
               <span>🍰</span>
-              <span>+ Đặt thực đơn mới</span>
+              <span className="inline">+ Đặt thực đơn mới</span>
             </button>
 
             {/* 📦 NÚT 2: ĐƠN HÀNG CỦA TÔI */}
@@ -361,7 +361,7 @@ const Topbar = ({ openChatModal, toggleCartDrawer }) => {
                 fetchMyOrders();
                 setShowMyOrdersModal(true);
               }}
-              className="px-3.5 py-1.5 bg-purple-50 dark:bg-slate-800 hover:bg-purple-100 dark:hover:bg-slate-700 text-purple-700 dark:text-purple-300 font-bold text-xs rounded-xl border border-purple-300 dark:border-purple-500/30 transition-all cursor-pointer flex items-center space-x-1.5 relative shadow-2xs"
+              className="px-2 sm:px-3.5 py-1.5 bg-purple-50 dark:bg-slate-800 hover:bg-purple-100 dark:hover:bg-slate-700 text-purple-700 dark:text-purple-300 font-bold text-xs rounded-xl border border-purple-300 dark:border-purple-500/30 transition-all cursor-pointer flex items-center space-x-1 relative shadow-2xs whitespace-nowrap shrink-0"
             >
               <span>📦</span>
               <span>Đơn hàng của tôi</span>
@@ -376,12 +376,12 @@ const Topbar = ({ openChatModal, toggleCartDrawer }) => {
                 fetchNotifications();
                 setShowNotiModal(true);
               }}
-              className="px-3.5 py-1.5 bg-amber-50 dark:bg-slate-800 hover:bg-amber-100 dark:hover:bg-slate-700 text-amber-700 dark:text-amber-300 font-bold text-xs rounded-xl border border-amber-300 dark:border-amber-500/30 transition-all cursor-pointer flex items-center space-x-1.5 relative shadow-2xs"
+              className="px-2 sm:px-3.5 py-1.5 bg-amber-50 dark:bg-slate-800 hover:bg-amber-100 dark:hover:bg-slate-700 text-amber-700 dark:text-amber-300 font-bold text-xs rounded-xl border border-amber-300 dark:border-amber-500/30 transition-all cursor-pointer flex items-center space-x-1 relative shadow-2xs whitespace-nowrap shrink-0"
             >
               <span>🔔</span>
               <span>Thông báo</span>
               {unreadNotiCount > 0 && (
-                <span className="bg-red-500 text-white text-[10px] font-black px-1.5 py-0.2 rounded-full ml-1">
+                <span className="bg-red-500 text-white text-[10px] font-black px-1.5 py-0.2 rounded-full ml-0.5">
                   {unreadNotiCount}
                 </span>
               )}
@@ -533,6 +533,16 @@ const Topbar = ({ openChatModal, toggleCartDrawer }) => {
                         ✅ Đơn hàng đã hoàn tất – Cảm ơn bạn đã ủng hộ tiệm!
                       </div>
                     ) : null}
+
+                    <button
+                      onClick={() => {
+                        setShowMyOrdersModal(false);
+                        navigate('/my-orders');
+                      }}
+                      className="w-full mt-2 py-2 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-xl text-xs transition-colors cursor-pointer text-center flex items-center justify-center space-x-1"
+                    >
+                      <span>🧾 Xem chi tiết Bill Hóa Đơn tại "Đơn hàng của tôi"</span>
+                    </button>
                   </div>
                 </div>
               ))}

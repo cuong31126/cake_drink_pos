@@ -2,11 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import API from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import { toast } from 'react-hot-toast';
 
-// Cấu hình tài khoản nhận tiền thực tế
-const BANK_BIN = '970422'; // MBBank
-const ACCOUNT_NUMBER = '0969839241';
-const ACCOUNT_NAME = 'LE QUOC CUONG';
+import { BANK_BIN, ACCOUNT_NUMBER, ACCOUNT_NAME, BRANCHES, getBranchLabel } from '../config/constants';
 
 const OrderMenu = () => {
     const [searchParams, setSearchParams] = useSearchParams();
@@ -17,13 +15,6 @@ const OrderMenu = () => {
     const tableId = searchParams.get('tableId');
     const orderId = searchParams.get('orderId');
     const defaultStoreId = user?.store_id || localStorage.getItem('storeId') || 'store_Q1';
-
-    // Danh sách chi nhánh
-    const BRANCHES = [
-        { id: 'store_Q1', label: 'Chi nhánh 1 - Quận 1' },
-        { id: 'store_ThuDuc', label: 'Chi nhánh 2 - Thủ Đức' },
-    ];
-    const getBranchLabel = (id) => BRANCHES.find(b => b.id === id)?.label || id;
 
     // State chi nhánh đang chọn (để Admin có thể chuyển chi nhánh khi đặt Mang đi)
     const [selectedStore, setSelectedStore] = useState(defaultStoreId);
@@ -95,29 +86,40 @@ const OrderMenu = () => {
                                 setSearchParams(newParams, { replace: true });
                                 setCart([]);
                                 setIsOrderConfirmed(false);
+                                setIsSubmitted(false);
                                 return;
                             }
 
-                            const mappedItems = orderData.items.map(item => ({
-                                product_id: item.product_id,
-                                name: item.name,
-                                base_price: item.price,
-                                price: item.price,
-                                quantity: item.quantity,
-                                size: item.selected_attributes?.size || 'M',
-                                sugar: item.selected_attributes?.sugar || '100%',
-                                ice: item.selected_attributes?.ice || '100%',
-                                selected_attributes: item.selected_attributes || { size: 'M', sugar: '100%', ice: '100%' }
-                            }));
-                            setCart(mappedItems);
-
                             const isStaffOrAdmin = userRole === 'staff' || userRole === 'admin';
-                            if (orderData.status === 'serving' || orderData.status === 'ready') {
+                            if (orderData.is_confirmed || orderData.status === 'serving' || orderData.status === 'ready') {
                                 setIsOrderConfirmed(!isStaffOrAdmin);
                                 setIsSubmitted(true);
+                                // 💡 ĐƠN ĐÃ XÁC NHẬN/GỬI BẾP: Xóa sạch giỏ hàng nháp để về 0 món cho khách sẵn sàng chọn đơn mới!
+                                setCart([]);
                             } else {
+                                const mappedItems = orderData.items.map(item => ({
+                                    product_id: item.product_id,
+                                    name: item.name,
+                                    base_price: item.price,
+                                    price: item.price,
+                                    quantity: item.quantity,
+                                    size: item.selected_attributes?.size || 'M',
+                                    sugar: item.selected_attributes?.sugar || '100%',
+                                    ice: item.selected_attributes?.ice || '100%',
+                                    selected_attributes: item.selected_attributes || { size: 'M', sugar: '100%', ice: '100%' }
+                                }));
+                                setCart(mappedItems);
                                 setIsOrderConfirmed(false);
-                                setIsSubmitted(!!orderData.is_confirmed);
+                                setIsSubmitted(false);
+                            }
+
+                            // Tự động mở Modal QR khi chuyển tiếp từ trang Đơn Hàng Của Tôi với showPayModal=true
+                            if (searchParams.get('showPayModal') === 'true') {
+                                const total = orderData.final_total || orderData.sub_total || 0;
+                                const addInfo = encodeURIComponent(`Thanh Toan Don ${orderData._id.slice(-6).toUpperCase()}`);
+                                const generatedQr = `https://img.vietqr.io/image/${BANK_BIN}-${ACCOUNT_NUMBER}-compact2.png?amount=${total}&addInfo=${addInfo}&accountName=${encodeURIComponent(ACCOUNT_NAME)}`;
+                                setQrUrl(generatedQr);
+                                setShowPayModal(true);
                             }
                         }
                     } catch (orderErr) {
@@ -140,16 +142,24 @@ const OrderMenu = () => {
         loadInitialData();
     }, [orderId, orderType, setSearchParams]);
 
-    // Polling thanh toán PayOS
+    // Polling thanh toán PayOS (giới hạn tối đa 3 phút / 60 lần kiểm tra)
     useEffect(() => {
         let intervalId;
+        let pollCount = 0;
+        const MAX_POLLS = 60; // 60 * 3s = 3 phút
+
         if (showPayModal && orderId) {
             const checkPaymentStatus = async () => {
+                pollCount += 1;
+                if (pollCount > MAX_POLLS) {
+                    clearInterval(intervalId);
+                    return;
+                }
                 try {
                     const res = await API.get(`/orders/${orderId}`);
                     if (res.data.success && res.data.data.payment_status === 'paid') {
                         clearInterval(intervalId);
-                        alert("Hệ thống: Xác nhận giao dịch chuyển khoản PayOS thành công!");
+                        toast.success("✅ Xác nhận giao dịch chuyển khoản PayOS thành công!");
                         setCart([]);
                         setShowPayModal(false);
                         navigate('/tables');
@@ -183,7 +193,7 @@ const OrderMenu = () => {
                 customer_phone: orderType === 'dine-in' ? '' : customerPhone,
                 order_type: orderType,
                 reason: isDecrease ? "Hủy/Giảm bớt món ăn" : "Cập nhật giỏ hàng",
-                admin_approver_id: isDecrease ? "u_admin_01" : undefined
+                admin_approver_id: isDecrease ? (user?._id || user?.id || "u_admin_01") : undefined
             };
             await API.put(`/orders/${orderId}/edit-items`, body);
         } catch (err) {
@@ -351,8 +361,12 @@ const OrderMenu = () => {
         return cart.reduce((total, item) => total + (item.price * item.quantity), 0);
     };
 
-    // 🚫 HÀM HỦY ĐƠN HÀNG TOÀN DIỆN
+    // 🚫 HÀM HỦY ĐƠN HÀNG TOÀN DIỆN (Chỉ cho phép Staff / Admin)
     const handleCancelOrder = async () => {
+        if (userRole === 'user') {
+            toast.error("Vui lòng liên hệ nhân viên quầy để hủy đơn!");
+            return;
+        }
         try {
             if (orderId) {
                 await API.post(`/orders/${orderId}/cancel`);
@@ -361,20 +375,20 @@ const OrderMenu = () => {
             setIsSubmitted(false);
             setIsOrderConfirmed(false);
             setSearchParams({ type: orderType }, { replace: true });
-            alert("✅ Đã hủy đơn hàng thành công và giải phóng bàn ăn!");
+            toast.success("✅ Đã hủy đơn hàng thành công!");
             if (userRole === 'staff' || userRole === 'admin') {
                 navigate('/tables');
             }
         } catch (err) {
             console.error("Lỗi hủy đơn:", err);
-            alert(err.response?.data?.message || "Lỗi khi hủy đơn hàng.");
+            toast.error(err.response?.data?.message || "Lỗi khi hủy đơn hàng.");
         }
     };
 
     // Bắt đầu quy trình thanh toán QR
     const handleOpenPaymentModal = () => {
         if (cart.length === 0) {
-            alert("Giỏ hàng đang trống! Vui lòng chọn ít nhất 1 món ăn.");
+            toast.error("Giỏ hàng đang trống! Vui lòng chọn ít nhất 1 món ăn.");
             return;
         }
         const total = calculateTotal();
@@ -400,22 +414,22 @@ const OrderMenu = () => {
     }
 
     return (
-        <div className="min-h-screen transition-colors duration-300 bg-gray-100 dark:bg-slate-950 text-gray-800 dark:text-slate-100 pt-28 flex relative font-sans">
+        <div className="min-h-screen transition-colors duration-300 bg-gray-100 dark:bg-slate-950 text-gray-800 dark:text-slate-100 pt-24 sm:pt-28 flex relative font-sans">
             {/* 🟢 DANH SÁCH MENU MÓN ĂN (MẶC ĐỊNH RỘNG 100% KHI CHƯA MỞ GIỎ HÀNG) */}
-            <div className={`p-6 transition-all duration-300 overflow-y-auto pb-32 ${showCartDrawer ? 'w-2/3' : 'w-full max-w-7xl mx-auto'}`}>
-                <div className="flex items-center justify-between mb-6">
-                    <div className="flex items-center space-x-3">
+            <div className={`p-3 sm:p-6 transition-all duration-300 overflow-y-auto pb-32 ${showCartDrawer ? 'w-full md:w-2/3' : 'w-full max-w-7xl mx-auto'}`}>
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-6">
+                    <div className="flex flex-wrap items-center gap-2 sm:gap-3">
                         <button onClick={() => navigate(-1)} className="text-xs font-bold text-blue-600 dark:text-blue-400 bg-white dark:bg-slate-800 px-3 py-2 rounded-xl border border-gray-200 dark:border-slate-700 shadow-2xs hover:bg-gray-50 dark:hover:bg-slate-700 cursor-pointer">
                             ⬅️ Trở lại
                         </button>
-                        <h2 className="text-xl font-black text-gray-800 dark:text-slate-100 uppercase tracking-wide">
-                            Menu Phục Vụ ({orderType === 'dine-in' ? `Bàn ${tableId || 'Chưa chọn'}` : 'Mang đi'})
+                        <h2 className="text-base sm:text-xl font-black text-gray-800 dark:text-slate-100 uppercase tracking-wide">
+                            Menu ({orderType === 'dine-in' ? `Bàn ${tableId || 'Chưa chọn'}` : 'Mang đi'})
                         </h2>
                         {userRole === 'admin' && orderType === 'take-away' && (
                             <select
                                 value={selectedStore}
                                 onChange={(e) => setSelectedStore(e.target.value)}
-                                className="ml-4 bg-white dark:bg-slate-800 border border-purple-200 dark:border-purple-800/50 rounded-xl px-3 py-1.5 text-xs font-bold text-purple-700 dark:text-purple-300 focus:outline-none focus:ring-2 focus:ring-purple-500 cursor-pointer shadow-sm"
+                                className="bg-white dark:bg-slate-800 border border-purple-200 dark:border-purple-800/50 rounded-xl px-2.5 py-1 text-xs font-bold text-purple-700 dark:text-purple-300 focus:outline-none cursor-pointer shadow-sm"
                             >
                                 {BRANCHES.map(b => (
                                     <option key={b.id} value={b.id}>{b.label}</option>
@@ -423,7 +437,7 @@ const OrderMenu = () => {
                             </select>
                         )}
                         {userRole === 'staff' && orderType === 'take-away' && (
-                            <span className="ml-4 text-[10px] font-bold bg-blue-50 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800 px-2 py-1 rounded-lg">
+                            <span className="text-[10px] font-bold bg-blue-50 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800 px-2 py-1 rounded-lg">
                                 📍 {getBranchLabel(selectedStore)}
                             </span>
                         )}
@@ -433,7 +447,7 @@ const OrderMenu = () => {
                     {!showCartDrawer && (
                         <button
                             onClick={() => setShowCartDrawer(true)}
-                            className="px-4 py-2 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white font-black text-xs rounded-xl shadow-md transition-all cursor-pointer flex items-center space-x-2"
+                            className="w-full sm:w-auto px-4 py-2 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white font-black text-xs rounded-xl shadow-md transition-all cursor-pointer flex items-center justify-center space-x-2"
                         >
                             <span>🛒 Xem giỏ hàng & Thuộc tính ({cart.reduce((sum, i) => sum + i.quantity, 0)} món)</span>
                         </button>
@@ -445,8 +459,8 @@ const OrderMenu = () => {
                     <button
                         onClick={() => setActiveCategory('all')}
                         className={`px-4 py-2 rounded-full text-xs font-bold transition-all cursor-pointer ${activeCategory === 'all'
-                                ? 'bg-blue-600 text-white shadow-sm'
-                                : 'bg-white dark:bg-slate-800 text-gray-600 dark:text-slate-300 border border-gray-200 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-700'
+                            ? 'bg-blue-600 text-white shadow-sm'
+                            : 'bg-white dark:bg-slate-800 text-gray-600 dark:text-slate-300 border border-gray-200 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-700'
                             }`}
                     >
                         Tất cả ({products.length})
@@ -456,8 +470,8 @@ const OrderMenu = () => {
                             key={cat._id}
                             onClick={() => setActiveCategory(cat._id)}
                             className={`px-4 py-2 rounded-full text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${activeCategory === cat._id
-                                    ? 'bg-blue-600 text-white shadow-sm'
-                                    : 'bg-white dark:bg-slate-800 text-gray-600 dark:text-slate-300 border border-gray-200 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-700'
+                                ? 'bg-blue-600 text-white shadow-sm'
+                                : 'bg-white dark:bg-slate-800 text-gray-600 dark:text-slate-300 border border-gray-200 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-700'
                                 }`}
                         >
                             {cat.name}
@@ -523,8 +537,8 @@ const OrderMenu = () => {
                 </div>
             </div>
 
-            {/* 🔴 KHUNG CHI TIẾT ĐƠN HÀNG & CHỈNH SỬA THUỘC TÍNH (SLIDE-OVER / DRAWER MỞ KHI CẦN) */}
-            {showCartDrawer && (
+            {/* 🔴 KHUNG CHI TIẾT ĐƠN HÀNG & CHỈNH SỬA THUỘC TÍNH (TỰ ĐỘNG ẨN KHI MỞ MODAL THANH TOÁN QR) */}
+            {showCartDrawer && !showPayModal && (
                 <div className="w-full sm:w-96 bg-white dark:bg-slate-900 border-l border-gray-200 dark:border-slate-800 p-5 flex flex-col justify-between fixed right-0 top-24 bottom-0 shadow-2xl z-40 animate-in slide-in-from-right duration-200 text-slate-800 dark:text-slate-100 overflow-y-auto">
                     <div className="flex flex-col min-h-full justify-between space-y-4">
                         <div className="flex justify-between items-center border-b border-gray-200 dark:border-slate-800 pb-3 mb-3">
@@ -553,8 +567,8 @@ const OrderMenu = () => {
                                         }, { replace: true });
                                     }}
                                     className={`py-2 px-2.5 rounded-xl font-bold text-[11px] transition-all cursor-pointer flex items-center justify-center space-x-1 ${orderType === 'dine-in'
-                                            ? 'bg-amber-500 text-slate-950 shadow-xs'
-                                            : 'bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-100'
+                                        ? 'bg-amber-500 text-slate-950 shadow-xs'
+                                        : 'bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-100'
                                         }`}
                                 >
                                     <span>🍽️</span>
@@ -571,8 +585,8 @@ const OrderMenu = () => {
                                         }, { replace: true });
                                     }}
                                     className={`py-2 px-2.5 rounded-xl font-bold text-[11px] transition-all cursor-pointer flex items-center justify-center space-x-1 ${orderType === 'take-away' || orderType === 'delivery'
-                                            ? 'bg-amber-500 text-slate-950 shadow-xs'
-                                            : 'bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-100'
+                                        ? 'bg-amber-500 text-slate-950 shadow-xs'
+                                        : 'bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-100'
                                         }`}
                                 >
                                     <span>🛵</span>
@@ -661,7 +675,7 @@ const OrderMenu = () => {
                                                             const masterProd = products.find(p => p._id === targetId) || item;
                                                             const extraL = Number(masterProd.attributes?.size_L_extra ?? masterProd.attributes?.sizes?.find(s => s.size === 'L')?.extra_price ?? masterProd.size_L_extra ?? 10000);
                                                             const extraXL = Number(masterProd.attributes?.size_XL_extra ?? masterProd.attributes?.sizes?.find(s => s.size === 'XL')?.extra_price ?? masterProd.size_XL_extra ?? 15000);
-                                                            
+
                                                             let extraTag = '';
                                                             if (sz === 'L' && extraL > 0) {
                                                                 extraTag = `(+${extraL >= 1000 ? (extraL / 1000) + 'k' : extraL + 'đ'})`;
@@ -675,8 +689,8 @@ const OrderMenu = () => {
                                                                     disabled={isOrderConfirmed}
                                                                     onClick={() => handleUpdateAttribute(index, 'size', sz)}
                                                                     className={`px-2 py-0.5 rounded font-bold transition-all cursor-pointer ${(item.size || 'M') === sz
-                                                                            ? 'bg-purple-600 text-white shadow-2xs'
-                                                                            : 'bg-white dark:bg-slate-600 border border-slate-200 dark:border-slate-500 text-slate-600 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-500'
+                                                                        ? 'bg-purple-600 text-white shadow-2xs'
+                                                                        : 'bg-white dark:bg-slate-600 border border-slate-200 dark:border-slate-500 text-slate-600 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-500'
                                                                         }`}
                                                                 >
                                                                     {sz} {extraTag}
@@ -733,131 +747,81 @@ const OrderMenu = () => {
                                 <span className="text-lg font-black text-red-600 dark:text-red-400">{calculateTotal().toLocaleString()} đ</span>
                             </div>
 
-                            {!isOrderConfirmed ? (
-                                !isSubmitted ? (
-                                    <button
-                                        onClick={async () => {
-                                            if (cart.length === 0) {
-                                                alert("Vui lòng chọn ít nhất 1 món ăn!");
-                                                return;
+                            <button
+                                disabled={cart.length === 0}
+                                onClick={async () => {
+                                    if (cart.length === 0) {
+                                        toast.error("Vui lòng chọn ít nhất 1 món ăn!");
+                                        return;
+                                    }
+                                    try {
+                                        let currentId = orderId;
+                                        // 💡 Nếu chưa có orderId -> Tự động khởi tạo đơn mới
+                                        if (!currentId) {
+                                            const createRes = await API.post('/orders/take-away', {
+                                                store_id: selectedStore,
+                                                order_type: orderType,
+                                                delivery_address: orderType === 'dine-in' ? '' : deliveryAddress,
+                                                customer_phone: orderType === 'dine-in' ? '' : customerPhone,
+                                                items: cart.map(i => ({ product_id: i.product_id, name: i.name, price: i.price, quantity: i.quantity, selected_attributes: i.selected_attributes }))
+                                            });
+                                            if (createRes.data.success) {
+                                                currentId = createRes.data.data._id || createRes.data.data.id;
                                             }
-                                            try {
-                                                let currentId = orderId;
-                                                // 💡 Nếu chưa có orderId -> Tự động khởi tạo đơn mới
-                                                if (!currentId) {
-                                                    const createRes = await API.post('/orders/take-away', {
-                                                        store_id: selectedStore,
-                                                        order_type: orderType,
-                                                        delivery_address: orderType === 'dine-in' ? '' : deliveryAddress,
-                                                        customer_phone: orderType === 'dine-in' ? '' : customerPhone,
-                                                        items: cart.map(i => ({ product_id: i.product_id, name: i.name, price: i.price, quantity: i.quantity, selected_attributes: i.selected_attributes }))
-                                                    });
-                                                    if (createRes.data.success) {
-                                                        currentId = createRes.data.data._id || createRes.data.data.id;
-                                                        setSearchParams({ type: orderType, orderId: currentId }, { replace: true });
-                                                    }
-                                                }
+                                        }
 
-                                                try {
+                                        try {
+                                            await API.post(`/orders/${currentId}/confirm`, { is_confirmed: true, phone: customerPhone });
+                                        } catch (confirmErr) {
+                                            // NẾU LỖI 404: Tự động tạo lại đơn mới và xác nhận
+                                            if (confirmErr.response?.status === 404) {
+                                                const freshRes = await API.post('/orders/take-away', {
+                                                    store_id: selectedStore,
+                                                    order_type: orderType,
+                                                    delivery_address: orderType === 'dine-in' ? '' : deliveryAddress,
+                                                    customer_phone: orderType === 'dine-in' ? '' : customerPhone,
+                                                    items: cart.map(i => ({ product_id: i.product_id, name: i.name, price: i.price, quantity: i.quantity, selected_attributes: i.selected_attributes }))
+                                                });
+                                                if (freshRes.data.success) {
+                                                    currentId = freshRes.data.data._id || freshRes.data.data.id;
                                                     await API.post(`/orders/${currentId}/confirm`, { is_confirmed: true, phone: customerPhone });
-                                                } catch (confirmErr) {
-                                                    // NẾU LỖI 404 (Đơn bị xóa hoặc không tìm thấy): Tự động tạo lại đơn mới và xác nhận ngay lập tức!
-                                                    if (confirmErr.response?.status === 404) {
-                                                        const freshRes = await API.post('/orders/take-away', {
-                                                            store_id: selectedStore,
-                                                            order_type: orderType,
-                                                            delivery_address: orderType === 'dine-in' ? '' : deliveryAddress,
-                                                            customer_phone: orderType === 'dine-in' ? '' : customerPhone,
-                                                            items: cart.map(i => ({ product_id: i.product_id, name: i.name, price: i.price, quantity: i.quantity, selected_attributes: i.selected_attributes }))
-                                                        });
-                                                        if (freshRes.data.success) {
-                                                            currentId = freshRes.data.data._id || freshRes.data.data.id;
-                                                            setSearchParams({ type: orderType, orderId: currentId }, { replace: true });
-                                                            await API.post(`/orders/${currentId}/confirm`, { is_confirmed: true, phone: customerPhone });
-                                                        }
-                                                    } else {
-                                                        throw confirmErr;
-                                                    }
                                                 }
-
-                                                // 💡 Đơn đặt thành công -> Bỏ trống giỏ hàng & Xóa orderId khỏi URL
-                                                setCart([]);
-                                                const newParams = new URLSearchParams(searchParams);
-                                                newParams.delete('orderId');
-                                                setSearchParams(newParams, { replace: true });
-                                                
-                                                setIsSubmitted(false);
-                                                setIsOrderConfirmed(false);
-                                                setShowCartDrawer(false);
-                                                localStorage.removeItem('cart');
-                                                sessionStorage.removeItem('cart');
-
-                                                setTimeout(() => {
-                                                    alert("✅ Đặt hàng thành công! Đơn hàng của bạn đã được gửi tới Bếp.\n\nBạn có thể kiểm tra trạng thái đơn tại mục '🛍️ Đơn hàng của tôi'.");
-                                                }, 100);
-                                            } catch (err) {
-                                                alert(err.response?.data?.message || "Lỗi khi chốt đơn hàng.");
+                                            } else {
+                                                throw confirmErr;
                                             }
-                                        }}
-                                        className="w-full py-3 bg-amber-500 hover:bg-amber-600 text-slate-950 font-black rounded-xl text-xs shadow-md transition-all cursor-pointer border border-amber-400"
-                                    >
-                                        ✅ XÁC NHẬN ĐƠN HÀNG
-                                    </button>
-                                ) : (
-                                    <div className="space-y-2">
-                                        <div className="bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 text-xs font-bold p-2.5 rounded-xl text-center">
-                                            ✓ Đơn hàng đã được chốt xác nhận!
-                                        </div>
-                                        <div className="grid grid-cols-2 gap-2">
-                                            {userRole === 'user' ? (
-                                                <button
-                                                    onClick={() => {
-                                                        alert("⚠️ Đơn hàng đã được gửi vào Bếp và đang được chế biến!\n\nVui lòng liên hệ Nhân viên quầy để yêu cầu hủy đơn và đặt lại đơn mới từ đầu.");
-                                                    }}
-                                                    className="py-2.5 bg-slate-200 hover:bg-slate-300 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-800 dark:text-slate-100 font-bold rounded-xl text-xs transition-colors cursor-pointer"
-                                                >
-                                                    ✏️ Sửa lại đơn
-                                                </button>
-                                            ) : (
-                                                <button
-                                                    onClick={handleCancelOrder}
-                                                    className="py-2.5 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl text-xs transition-colors cursor-pointer shadow-md"
-                                                >
-                                                    🚫 Hủy đơn hàng
-                                                </button>
-                                            )}
-                                            <button
-                                                onClick={handleOpenPaymentModal}
-                                                className="py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-xs transition-colors cursor-pointer shadow-md"
-                                            >
-                                                💳 Thanh toán QR
-                                            </button>
-                                        </div>
-                                    </div>
-                                )
-                            ) : (
-                                <div className="space-y-2">
-                                    <div className="bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 text-xs font-bold p-2.5 rounded-xl text-center">
-                                        ✓ Đơn hàng đã được Bếp tiếp nhận & làm món!
-                                    </div>
-                                    <div className="grid grid-cols-2 gap-2">
-                                        {(userRole === 'staff' || userRole === 'admin') && (
-                                            <button
-                                                onClick={handleCancelOrder}
-                                                className="py-2.5 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl text-xs transition-colors cursor-pointer shadow-md"
-                                            >
-                                                🚫 Hủy đơn
-                                            </button>
-                                        )}
-                                        <button
-                                            onClick={handleOpenPaymentModal}
-                                            className={`py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-xs transition-colors cursor-pointer shadow-md ${userRole === 'user' ? 'col-span-2' : ''}`}
-                                        >
-                                            💳 Thanh toán QR
-                                        </button>
-                                    </div>
-                                </div>
-                            )}
+                                        }
+
+                                        // 💡 Đơn đặt thành công -> Đưa giỏ hàng & toàn bộ form về trạng thái ban đầu hoàn toàn rỗng
+                                        setCart([]);
+                                        setDeliveryAddress('');
+                                        setCustomerPhone('');
+                                        setIsSubmitted(false);
+                                        setIsOrderConfirmed(false);
+                                        setShowCartDrawer(false);
+
+                                        const newParams = new URLSearchParams(searchParams);
+                                        newParams.delete('orderId');
+                                        newParams.delete('showPayModal');
+                                        newParams.delete('showDrawer');
+                                        setSearchParams(newParams, { replace: true });
+
+                                        localStorage.removeItem('cart');
+                                        sessionStorage.removeItem('cart');
+                                        localStorage.removeItem('active_cart');
+
+                                        toast.success("✅ Đặt hàng thành công! Đơn của bạn đã được gửi đến Quán và chờ xác nhận .", { duration: 4000 });
+                                        navigate('/my-orders');
+                                    } catch (err) {
+                                        toast.error(err.response?.data?.message || "Lỗi khi chốt đơn hàng.");
+                                    }
+                                }}
+                                className={`w-full py-3 font-black rounded-xl text-xs shadow-md transition-all cursor-pointer border ${cart.length > 0
+                                        ? 'bg-amber-500 hover:bg-amber-600 text-slate-950 border-amber-400'
+                                        : 'bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-500 border-slate-300 dark:border-slate-700 cursor-not-allowed'
+                                    }`}
+                            >
+                                ✅ XÁC NHẬN ĐƠN HÀNG
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -865,7 +829,7 @@ const OrderMenu = () => {
 
             {/* 💳 MODAL THANH TOÁN QR PAYOS */}
             {showPayModal && (
-                <div className="fixed inset-0 bg-black/75 backdrop-blur-xs flex items-center justify-center z-50 p-4">
+                <div className="fixed inset-0 bg-black/75 backdrop-blur-xs flex items-center justify-center z-[70] p-4">
                     <div className="bg-white dark:bg-slate-900 rounded-2xl max-w-sm w-full shadow-2xl overflow-hidden border border-gray-200 dark:border-slate-700 animate-in zoom-in-95 duration-150">
                         <div className="bg-emerald-600 p-5 text-white relative">
                             <h3 className="font-black text-base uppercase tracking-wide">Thanh Toán Đơn Hàng</h3>
@@ -903,63 +867,13 @@ const OrderMenu = () => {
                             </div>
                         </div>
 
-                        <div className="p-5 border-t border-gray-100 dark:border-slate-700 bg-gray-50 dark:bg-slate-800/60 flex flex-col space-y-3">
-                            {userRole !== 'user' && (
-                                <button
-                                    onClick={async () => {
-                                        try {
-                                            if (orderId) {
-                                                const res = await API.get(`/orders/${orderId}`);
-                                                if (res.data.success && res.data.data.payment_status === 'paid') {
-                                                    alert("Hệ thống: Xác nhận đơn hàng ĐÃ thanh toán thành công qua PayOS!");
-                                                    setCart([]);
-                                                    setShowPayModal(false);
-                                                    navigate('/tables');
-                                                } else {
-                                                    alert("Hệ thống: Chưa nhận được giao dịch chuyển khoản cho đơn hàng này. Vui lòng quét mã và chuyển khoản đúng nội dung.");
-                                                }
-                                            }
-                                        } catch (err) {
-                                            alert("Không thể kiểm tra trạng thái đơn hàng.");
-                                        }
-                                    }}
-                                    className="w-full py-2.5 bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold rounded-xl text-xs transition-colors border border-blue-200 cursor-pointer text-center"
-                                >
-                                    🔄 Kiểm tra kết quả chuyển khoản
-                                </button>
-                            )}
-
-                            <div className="flex gap-3">
-                                <button
-                                    onClick={() => setShowPayModal(false)}
-                                    className="flex-1 py-3 bg-white dark:bg-slate-700 border border-gray-200 dark:border-slate-600 text-gray-600 dark:text-slate-200 font-bold rounded-xl hover:bg-gray-100 dark:hover:bg-slate-600 transition-colors cursor-pointer text-center text-xs"
-                                >
-                                    Quay lại
-                                </button>
-                                <button
-                                    onClick={async () => {
-                                        const confirmManual = window.confirm(
-                                            "XÁC NHẬN THANH TOÁN TIỀN MẶT:\nBạn chọn chốt đơn hàng bằng hình thức Tiền mặt tại quầy?"
-                                        );
-                                        if (!confirmManual) return;
-
-                                        try {
-                                            if (orderId) {
-                                                await API.post(`/orders/${orderId}/settle`);
-                                            }
-                                            alert("Đã xác nhận thanh toán bằng tiền mặt thành công!");
-                                            setCart([]);
-                                            setShowPayModal(false);
-                                            navigate('/tables');
-                                        } catch (err) {
-                                            alert(err.response?.data?.message || "Lỗi xử lý chốt hóa đơn.");
-                                        }
-                                    }}
-                                    className="flex-1 py-3 bg-emerald-600 text-white font-black rounded-xl hover:bg-emerald-700 shadow-md transition-colors cursor-pointer text-center text-xs"
-                                >
-                                    💵 Thanh toán bằng tiền mặt
-                                </button>
-                            </div>
+                        <div className="p-5 border-t border-gray-100 dark:border-slate-700 bg-gray-50 dark:bg-slate-800/60">
+                            <button
+                                onClick={() => setShowPayModal(false)}
+                                className="w-full py-3 bg-white dark:bg-slate-700 border border-gray-200 dark:border-slate-600 text-gray-600 dark:text-slate-200 font-bold rounded-xl hover:bg-gray-100 dark:hover:bg-slate-600 transition-colors cursor-pointer text-center text-xs"
+                            >
+                                Quay lại
+                            </button>
                         </div>
                     </div>
                 </div>

@@ -4,9 +4,9 @@ const Product = require('../models/Product');
 const Notification = require('../models/Notification');
 
 // 💡 CÔNG TẮC TẮT/BẬT TỰ ĐỘNG TRỪ TỒN KHO KHI TEST ĐƠN HÀNG:
-// - Đặt false: Tắt tự động trừ tồn kho (Dành cho việc tạo đơn thử nghiệm thoải mái mà không lo bị hết món trong DB)
+// - Đặt false: Tắt tự động trừ tồn kho
 // - Đặt true : Bật tự động trừ tồn kho khi chạy thật
-const ENABLE_AUTO_STOCK_DEDUCTION = false;
+const ENABLE_AUTO_STOCK_DEDUCTION = true;
 
 /**
  * 💡 Hàm phụ trợ: Tự động trừ tồn kho sản phẩm theo chi nhánh khi có đơn hàng mới hoặc thêm món

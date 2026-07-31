@@ -1,8 +1,22 @@
 import axios from 'axios';
 
-// Tự động chuẩn hóa URL API: Nếu biến VITE_API_URL thiếu '/api/v1' ở cuối, tự động bổ sung vào
+// Tự động phân biệt môi trường: Khi chạy ở Localhost -> dùng http://localhost:5000/api/v1
+// Khi deploy Vercel -> dùng biến VITE_API_URL (Render backend)
 const getBaseURL = () => {
-  let rawUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api/v1';
+  const isLocalhost = Boolean(
+    window.location.hostname === 'localhost' ||
+    window.location.hostname === '[::1]' ||
+    window.location.hostname.match(/^127(?:\.(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)){3}$/)
+  );
+
+  if (isLocalhost) {
+    return 'http://localhost:5000/api/v1';
+  }
+
+  let rawUrl = import.meta.env.VITE_API_URL;
+  if (!rawUrl || !rawUrl.trim()) {
+    return 'http://localhost:5000/api/v1';
+  }
   rawUrl = rawUrl.trim().replace(/\/+$/, '');
   if (!rawUrl.endsWith('/api/v1')) {
     return `${rawUrl}/api/v1`;
@@ -13,7 +27,7 @@ const getBaseURL = () => {
 // Khởi tạo instance Axios với đường dẫn chuẩn hóa
 const API = axios.create({
   baseURL: getBaseURL(),
-  timeout: 10000, // Ngắt kết nối nếu quá 10 giây không phản hồi
+  timeout: 30000, // Tăng lên 30 giây để tránh bị ngắt khi Render cold-start
 });
 
 // Middleware chặn trước khi gửi đi (Request Interceptor) để đính kèm Token
