@@ -118,11 +118,23 @@ const updateProductStock = async (req, res, next) => {
       throw new Error('Không tìm thấy sản phẩm.');
     }
 
+    const stockNum = Number(stock);
+    const isAvail = stockNum > 0;
+
     const idx = product.inventory.findIndex(inv => inv.store_id === store_id);
     if (idx > -1) {
-      product.inventory[idx].stock = stock;
+      product.inventory[idx].stock = stockNum;
+      product.inventory[idx].is_available = isAvail;
     } else {
-      product.inventory.push({ store_id, stock, is_available: true });
+      product.inventory.push({ store_id, stock: stockNum, is_available: isAvail });
+    }
+
+    // ⚡ TỰ ĐỘNG ĐỒNG BỘ TRẠNG THÁI STATUS TỔNG CỦA MÓN ÁN (SELLING / OUT_OF_STOCK)
+    const totalStock = (product.inventory || []).reduce((sum, inv) => sum + (inv.stock || 0), 0);
+    if (totalStock <= 0) {
+      product.status = 'out_of_stock';
+    } else {
+      product.status = 'selling';
     }
 
     await product.save();
@@ -178,12 +190,25 @@ const toggleProductStatus = async (req, res, next) => {
       throw new Error('Không tìm thấy sản phẩm.');
     }
 
-    product.status = product.status === 'selling' ? 'out_of_stock' : 'selling';
+    const nextStatus = product.status === 'selling' ? 'out_of_stock' : 'selling';
+    product.status = nextStatus;
+
+    // Tự động đồng bộ trạng thái is_available cho toàn bộ kho chi nhánh tương ứng
+    if (nextStatus === 'out_of_stock') {
+      product.inventory.forEach(inv => {
+        inv.is_available = false;
+      });
+    } else {
+      product.inventory.forEach(inv => {
+        if (inv.stock > 0) inv.is_available = true;
+      });
+    }
+
     const updatedProduct = await product.save();
 
     res.status(200).json({
       success: true,
-      message: `Đã cập nhật trạng thái món ăn thành công sang: ${product.status === 'selling' ? 'Đang bán' : 'Hết hàng'}`,
+      message: `Đã cập nhật trạng thái món ăn thành công sang: ${nextStatus === 'selling' ? 'Đang bán' : 'Hết hàng'}`,
       data: updatedProduct
     });
   } catch (error) {

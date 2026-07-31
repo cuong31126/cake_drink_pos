@@ -113,12 +113,24 @@ const createInventoryLog = async (req, res, next) => {
       const product = await Product.findById(product_id);
       if (product) {
         prodName = product.name;
+        const stockNum = Number(new_stock);
+        const isAvail = stockNum > 0;
+
         const idx = product.inventory.findIndex(i => i.store_id === store_id);
         if (idx > -1) {
-          product.inventory[idx].stock = Number(new_stock);
+          product.inventory[idx].stock = stockNum;
+          product.inventory[idx].is_available = isAvail;
         } else {
-          product.inventory.push({ store_id, stock: Number(new_stock), is_available: true });
+          product.inventory.push({ store_id, stock: stockNum, is_available: isAvail });
         }
+
+        const totalStock = (product.inventory || []).reduce((sum, inv) => sum + (inv.stock || 0), 0);
+        if (totalStock <= 0) {
+          product.status = 'out_of_stock';
+        } else {
+          product.status = 'selling';
+        }
+
         await product.save();
       }
     }
