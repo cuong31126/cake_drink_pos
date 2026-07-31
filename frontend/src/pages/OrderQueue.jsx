@@ -52,7 +52,7 @@ const OrderQueue = () => {
             
             if (ordersRes.data.success) {
                 const storeOrdersList = ordersRes.data.data.filter(order => 
-                    order.store_id === selectedStoreFilter || !order.store_id
+                    selectedStoreFilter === 'all' || order.store_id === selectedStoreFilter || !order.store_id
                 );
                 setAllStoreOrders(storeOrdersList);
 
@@ -421,6 +421,7 @@ const OrderQueue = () => {
                                 onChange={(e) => setSelectedStoreFilter(e.target.value)}
                                 className="w-full bg-slate-100 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-slate-100 focus:outline-none focus:border-purple-500 cursor-pointer"
                             >
+                                <option value="all">🏢 Tất cả chi nhánh</option>
                                 {BRANCHES.map(b => (
                                     <option key={b.id} value={b.id}>{b.label}</option>
                                 ))}
