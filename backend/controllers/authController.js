@@ -315,7 +315,7 @@ const getAllUsers = async (req, res, next) => {
  */
 const updateUserRole = async (req, res, next) => {
     try {
-        const { role, store_id, pin } = req.body;
+        const { role, store_id, pin, password } = req.body;
         const targetUserId = req.params.id;
 
         if (!['user', 'staff', 'admin'].includes(role)) {
@@ -335,6 +335,9 @@ const updateUserRole = async (req, res, next) => {
         }
         if (pin !== undefined && pin.trim().length === 6) {
             user.pin = pin.trim();
+        }
+        if (password !== undefined && password.trim().length >= 6) {
+            user.password = password.trim();
         }
 
         await user.save();

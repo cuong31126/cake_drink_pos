@@ -51,6 +51,11 @@ const StaffInventoryModal = ({ isOpen, onClose, user }) => {
 
   // 🔑 Trigger PIN Verification Modal (6 digits)
   const requestPinVerification = (onSuccessCallback) => {
+    if (isAdmin) {
+      // 🛡️ ĐẶC QUYỀN ADMIN: Bỏ qua nhập mã PIN 6 số
+      onSuccessCallback();
+      return;
+    }
     setPendingAction(() => onSuccessCallback);
     setPinInput('');
     setPinError('');

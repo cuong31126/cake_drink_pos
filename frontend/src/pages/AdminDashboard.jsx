@@ -130,6 +130,12 @@ const AdminDashboard = () => {
 
   // 🔑 HÀM KÍCH HOẠT MODAL PIN XÁC THỰC 6 SỐ CHO HÀNH ĐỘNG CỦA STAFF/ADMIN
   const requestPinVerification = (onSuccessCallback) => {
+    const currentRole = user?.role || localStorage.getItem('userRole');
+    if (currentRole === 'admin') {
+      // 🛡️ ĐẶC QUYỀN ADMIN: Bỏ qua bước nhập PIN 6 số, thực thi lưu trực tiếp!
+      onSuccessCallback();
+      return;
+    }
     setPendingPinAction(() => onSuccessCallback);
     setPinInput('');
     setPinError('');
@@ -371,6 +377,32 @@ const AdminDashboard = () => {
       }
     } catch (err) {
       alert(err.response?.data?.message || "Không thể cập nhật mã PIN.");
+    }
+  };
+
+  // 🔐 HÀM ĐỔI MẬT KHẨU TÀI KHOẢN TRỰC TIẾP CHO ADMIN
+  const handleUpdatePasswordSubmit = async (userId, userName) => {
+    const newPassword = window.prompt(`🔐 Nhập mật khẩu đăng nhập mới cho tài khoản [${userName || 'Người dùng'}]:`);
+    if (newPassword === null) return;
+    if (!newPassword || newPassword.trim().length < 6) {
+      alert("❌ Mật khẩu mới phải bao gồm ít nhất 6 ký tự!");
+      return;
+    }
+
+    try {
+      const userToUpdate = usersList.find(u => u._id === userId);
+      const res = await API.patch(`/users/${userId}/role`, {
+        role: userToUpdate?.role || 'staff',
+        store_id: userToUpdate?.store_id || 'store_Q1',
+        password: newPassword.trim()
+      });
+
+      if (res.data.success) {
+        alert(`✅ ĐÃ ĐỔI MẬT KHẨU THÀNH CÔNG!\n\nMật khẩu đăng nhập mới của ${userName || 'tài khoản'} đã được lưu an toàn vào MongoDB.`);
+        fetchUsers();
+      }
+    } catch (err) {
+      alert(err.response?.data?.message || "Không thể đổi mật khẩu.");
     }
   };
 
@@ -653,12 +685,20 @@ const AdminDashboard = () => {
                         </select>
                       </td>
                       <td className="p-4 text-center">
-                        <button
-                          onClick={() => handleUpdatePinSubmit(u._id, u.pin)}
-                          className="px-2.5 py-1 bg-amber-50 dark:bg-amber-950/60 hover:bg-amber-100 dark:hover:bg-amber-900/60 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800 font-mono font-bold text-xs rounded-lg transition-colors cursor-pointer"
-                        >
-                          🔑 {u.pin || '123456'} (Đổi PIN)
-                        </button>
+                        <div className="flex flex-col sm:flex-row items-center justify-center gap-1.5">
+                          <button
+                            onClick={() => handleUpdatePinSubmit(u._id, u.pin)}
+                            className="px-2.5 py-1 bg-amber-50 dark:bg-amber-950/60 hover:bg-amber-100 dark:hover:bg-amber-900/60 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800 font-mono font-bold text-xs rounded-lg transition-colors cursor-pointer whitespace-nowrap"
+                          >
+                            🔑 {u.pin || '123456'} (PIN)
+                          </button>
+                          <button
+                            onClick={() => handleUpdatePasswordSubmit(u._id, u.name || u.email)}
+                            className="px-2.5 py-1 bg-blue-50 dark:bg-blue-950/60 hover:bg-blue-100 dark:hover:bg-blue-900/60 text-blue-800 dark:text-blue-300 border border-blue-200 dark:border-blue-800 font-bold text-xs rounded-lg transition-colors cursor-pointer whitespace-nowrap"
+                          >
+                            🔐 Đổi Mật Khẩu
+                          </button>
+                        </div>
                       </td>
                       <td className="p-4 text-center">
                         <div className="flex items-center justify-center space-x-2">
@@ -1026,7 +1066,7 @@ const AdminDashboard = () => {
               </div>
 
               <div className="bg-amber-50 dark:bg-amber-950/30 p-3 rounded-xl border border-amber-100 dark:border-amber-900/40 text-[11px] text-amber-800 dark:text-amber-300 font-medium">
-                💡 Lưu ý: Hệ thống sẽ yêu cầu nhập <b>mã PIN 6 số</b> xác thực của Nhân viên / Quản lý trước khi lưu thay đổi vào database.
+                💡 Lưu ý: {user?.role === 'admin' || localStorage.getItem('userRole') === 'admin' ? <b>👑 Tài khoản Admin có đặc quyền lưu kho trực tiếp không cần nhập PIN.</b> : <span>Hệ thống yêu cầu nhập <b>mã PIN 6 số</b> xác thực của Nhân viên trước khi lưu.</span>}
               </div>
             </div>
 
@@ -1042,7 +1082,7 @@ const AdminDashboard = () => {
                 type="submit"
                 className="py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-black rounded-xl text-xs transition-all shadow-md cursor-pointer uppercase"
               >
-                🔒 Lưu Kho (Cần PIN 6 số)
+                {user?.role === 'admin' || localStorage.getItem('userRole') === 'admin' ? '💾 Lưu Kho (Đặc Quyền Admin)' : '🔒 Lưu Kho (Cần PIN 6 số)'}
               </button>
             </div>
           </form>
