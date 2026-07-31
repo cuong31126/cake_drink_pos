@@ -1,7 +1,7 @@
 // Cấu hình tài khoản nhận tiền thực tế VietQR / PayOS
 export const BANK_BIN = '970422'; // MBBank
 export const ACCOUNT_NUMBER = '0969839241';
-export const ACCOUNT_NAME = 'LE QUOC CUONG';
+export const ACCOUNT_NAME = 'LÊ QUỐC CƯỜNG';
 
 // Danh sách các chi nhánh cửa hàng POS
 export const BRANCHES = [

@@ -3,14 +3,19 @@ const Message = require('../models/Message');
 const User = require('../models/User');
 
 /**
- * @desc    Khởi tạo phòng chat tư vấn mới (AI hoặc người thật)
+ * @desc    Khởi tạo hoặc tìm kiếm phòng chat tư vấn (AI hoặc người thật)
  * @route   POST /api/v1/chats/rooms
  * @access  Private (Đã đăng nhập)
  */
 const createChatRoom = async (req, res, next) => {
   try {
-    const { is_ai_room } = req.body;
-    const userId = req.user._id.toString();
+    const { is_ai_room, customer_id } = req.body;
+    let userId = req.user._id.toString();
+
+    // Nếu Nhân viên/Admin chủ động chọn tạo phòng cho một khách hàng chỉ định
+    if (req.user.role !== 'user' && customer_id) {
+      userId = customer_id.toString();
+    }
     
     let room = await ChatRoom.findOne({ 
       customer_id: userId, 
@@ -20,15 +25,19 @@ const createChatRoom = async (req, res, next) => {
     if (!room) {
       room = await ChatRoom.create({
         customer_id: userId,
-        user_role: req.user.role,
+        user_role: (req.user.role !== 'user' && customer_id) ? 'user' : req.user.role,
         is_ai_room: is_ai_room || false,
         last_message: ""
       });
     }
 
+    const userObj = await User.findById(userId).select('name email role');
+    const roomObj = room.toObject ? room.toObject() : room;
+    roomObj.customer_name = userObj ? (userObj.name || userObj.email) : `Khách #${userId.slice(-4).toUpperCase()}`;
+
     res.status(201).json({
       success: true,
-      data: room
+      data: roomObj
     });
   } catch (error) {
     next(error);
@@ -69,12 +78,12 @@ const getChatRooms = async (req, res, next) => {
       }
     });
 
-    // Đính kèm thông tin tên người dùng thực tế
+    // Đính kèm thông tin tên người dùng thực tế từ Model User
     const customerIds = uniqueRooms.map(r => r.customer_id);
-    const users = await User.find({ _id: { $in: customerIds } }).select('_id name email googleName role');
+    const users = await User.find({ _id: { $in: customerIds } }).select('_id name email role');
     const userMap = {};
     users.forEach(u => { 
-      userMap[u._id.toString()] = u.googleName || u.name || u.email; 
+      userMap[u._id.toString()] = u.name || u.email; 
     });
 
     const enrichedRooms = uniqueRooms.map(r => ({

@@ -98,13 +98,31 @@ const ChatDashboard = () => {
 
           // 🎯 ƯU TIÊN CHỌN ĐÚNG PHÒNG CHAT CỦA KHÁCH HÀNG KHI CHUYỂN TỪ ORDERQUEUE TỚI
           if (targetCustomerId) {
-            const targetRoom = rooms.find(r => 
+            let targetRoom = rooms.find(r => 
               !r.is_ai_room && (
                 r.customer_id === targetCustomerId || 
                 r.customer_id?.toString() === targetCustomerId.toString() ||
                 (r.customer_name && r.customer_name.toLowerCase() === targetCustomerId.toLowerCase())
               )
             );
+
+            // 💡 Nếu chưa có phòng chat cho tài khoản mới này, Staff tự động tạo mới tại chỗ
+            if (!targetRoom) {
+              try {
+                const createRes = await API.post('/chats/rooms', {
+                  customer_id: targetCustomerId,
+                  is_ai_room: false
+                });
+                if (createRes.data.success) {
+                  targetRoom = createRes.data.data;
+                  rooms = [targetRoom, ...rooms.filter(r => r._id !== targetRoom._id)];
+                  setChatRooms(rooms.filter(r => !r.is_ai_room));
+                }
+              } catch (e) {
+                console.error("Lỗi khởi tạo phòng chat cho tài khoản mới:", e);
+              }
+            }
+
             if (targetRoom) {
               setActiveRoomId(targetRoom._id);
               setShowMobileChat(true);

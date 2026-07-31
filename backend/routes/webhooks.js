@@ -39,9 +39,17 @@ const handlePayOSWebhook = async (req, res, next) => {
       // Giữ nguyên webhookData từ req.body.data nếu checksum chưa khớp trong môi trường dev
     }
 
-    // 2. Kiểm tra cờ trạng thái thành công hoặc mô tả nội dung giao dịch
-    const description = webhookData?.description || webhookBody?.data?.description || webhookBody?.description || '';
-    const isSuccess = webhookBody?.success === true || webhookData?.code === '00' || webhookBody?.code === '00';
+    // 2. Lấy nội dung chuyển khoản từ bất kỳ định dạng nào (Mảng biến động số dư cá nhân hoặc Đối tượng PaymentLink)
+    let description = '';
+    if (Array.isArray(webhookBody?.data)) {
+      description = webhookBody.data.map(d => d.description || '').join(' ');
+    } else if (Array.isArray(webhookData)) {
+      description = webhookData.map(d => d.description || '').join(' ');
+    } else {
+      description = webhookData?.description || webhookBody?.data?.description || webhookBody?.description || '';
+    }
+
+    const isSuccess = webhookBody?.success === true || webhookData?.code === '00' || webhookBody?.code === '00' || Boolean(description);
 
     if (isSuccess || description) {
       // 1. Chuẩn hóa và khử toàn bộ dấu tiếng Việt (Ví dụ: "Thanh toán đơn" -> "thanh toan don")

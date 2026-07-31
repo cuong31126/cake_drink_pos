@@ -49,14 +49,14 @@ const OrderQueue = () => {
                 API.get('/orders'),
                 API.get(`/shifts/current?store_id=${selectedStoreFilter}`)
             ]);
-            
+
             if (ordersRes.data.success) {
-                const storeOrdersList = ordersRes.data.data.filter(order => 
+                const storeOrdersList = ordersRes.data.data.filter(order =>
                     selectedStoreFilter === 'all' || order.store_id === selectedStoreFilter || !order.store_id
                 );
                 setAllStoreOrders(storeOrdersList);
 
-                const activeOrders = storeOrdersList.filter(order => 
+                const activeOrders = storeOrdersList.filter(order =>
                     ['pending_confirm', 'serving', 'ready'].includes(order.status)
                 );
                 setOrders(activeOrders);
@@ -258,12 +258,11 @@ const OrderQueue = () => {
         printWindow.document.close();
     };
 
-    // Hành động xử lý đơn hàng
+    // Hành động xử lý đơn hàng (Nhận đơn từ cột Chờ xác nhận)
     const handleAcceptOrder = async (orderId) => {
         try {
             const res = await API.post(`/orders/${orderId}/accept`);
             if (res.data.success) {
-                alert("Đã nhận đơn và chuyển cho Bếp nấu!");
                 setOrders(prev => prev.map(o => o._id === orderId ? { ...o, status: 'serving' } : o));
                 fetchQueueData();
             }
@@ -276,7 +275,7 @@ const OrderQueue = () => {
         try {
             const res = await API.post(`/orders/${orderId}/ready`);
             if (res.data.success) {
-                alert("Bếp báo đã làm xong! Chuyển đơn sang trạng thái chờ trả.");
+
                 setOrders(prev => prev.map(o => o._id === orderId ? { ...o, status: 'ready' } : o));
                 fetchQueueData();
             }
@@ -291,7 +290,7 @@ const OrderQueue = () => {
             if (res.data.success) {
                 const methodText = paymentMethod === 'payos' ? 'Chuyển khoản QR' : 'Tiền mặt';
                 alert(`Chốt hóa đơn & Thanh toán [${methodText}] thành công! Đã giải phóng bàn ăn.`);
-                
+
                 setOrders(prev => prev.filter(o => o._id !== orderId));
                 if (selectedOrder?._id === orderId) setSelectedOrder(null);
                 if (settleModalOrder?._id === orderId) setSettleModalOrder(null);
@@ -394,7 +393,7 @@ const OrderQueue = () => {
 
     // Lọc tìm kiếm đơn hàng
     const filteredOrders = orders.filter(order => {
-        const matchesSearch = 
+        const matchesSearch =
             order._id.toLowerCase().includes(searchTerm.toLowerCase()) ||
             (order.created_by && order.created_by.toLowerCase().includes(searchTerm.toLowerCase())) ||
             (order.table_id && order.table_id.toLowerCase().includes(searchTerm.toLowerCase()));
@@ -529,8 +528,8 @@ const OrderQueue = () => {
                     {/* Bộ lọc & Tìm kiếm */}
                     <div className="space-y-3">
                         <h3 className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">🔍 Bộ lọc đơn hàng</h3>
-                        
-                        <input 
+
+                        <input
                             type="text"
                             placeholder="Mã đơn, Tên người đặt, Số bàn..."
                             value={searchTerm}
@@ -539,19 +538,19 @@ const OrderQueue = () => {
                         />
 
                         <div className="flex gap-1.5 bg-slate-200 dark:bg-slate-700 p-1 rounded-lg">
-                            <button 
+                            <button
                                 onClick={() => setTypeFilter('all')}
                                 className={`flex-1 py-1.5 text-[10px] font-bold rounded-md transition-all ${typeFilter === 'all' ? 'bg-purple-600 text-white shadow-sm' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'}`}
                             >
                                 Tất cả
                             </button>
-                            <button 
+                            <button
                                 onClick={() => setTypeFilter('dine-in')}
                                 className={`flex-1 py-1.5 text-[10px] font-bold rounded-md transition-all ${typeFilter === 'dine-in' ? 'bg-purple-600 text-white shadow-sm' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'}`}
                             >
                                 Tại bàn
                             </button>
-                            <button 
+                            <button
                                 onClick={() => setTypeFilter('take-away')}
                                 className={`flex-1 py-1.5 text-[10px] font-bold rounded-md transition-all ${typeFilter === 'take-away' ? 'bg-purple-600 text-white shadow-sm' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'}`}
                             >
@@ -588,8 +587,8 @@ const OrderQueue = () => {
                         </div>
                         <div className="p-3 overflow-y-auto flex-1 space-y-3">
                             {pendingOrdersList.map(order => (
-                                <div 
-                                    key={order._id} 
+                                <div
+                                    key={order._id}
                                     onClick={() => setSelectedOrder(order)}
                                     className="bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-750 border border-slate-200 dark:border-slate-700/60 hover:border-slate-300 dark:hover:border-slate-600 rounded-xl p-4 transition-all cursor-pointer shadow-sm relative group space-y-2"
                                 >
@@ -612,7 +611,7 @@ const OrderQueue = () => {
                                         <span className="text-[10px] font-black text-amber-600 dark:text-amber-400 flex items-center gap-1">
                                             <span>⌛</span> Chờ Staff nhận
                                         </span>
-                                        <button 
+                                        <button
                                             onClick={(e) => {
                                                 e.stopPropagation();
                                                 handleAcceptOrder(order._id);
@@ -637,8 +636,8 @@ const OrderQueue = () => {
                         </div>
                         <div className="p-3 overflow-y-auto flex-1 space-y-3">
                             {servingOrdersList.map(order => (
-                                <div 
-                                    key={order._id} 
+                                <div
+                                    key={order._id}
                                     onClick={() => setSelectedOrder(order)}
                                     className="bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-750 border border-slate-200 dark:border-slate-700/60 hover:border-slate-300 dark:hover:border-slate-600 rounded-xl p-4 transition-all cursor-pointer shadow-sm relative group space-y-2"
                                 >
@@ -667,7 +666,7 @@ const OrderQueue = () => {
                                         >
                                             🖨️ In Bill Bếp
                                         </button>
-                                        <button 
+                                        <button
                                             onClick={(e) => {
                                                 e.stopPropagation();
                                                 handleReadyOrder(order._id);
@@ -692,8 +691,8 @@ const OrderQueue = () => {
                         </div>
                         <div className="p-3 overflow-y-auto flex-1 space-y-3">
                             {readyOrdersList.map(order => (
-                                <div 
-                                    key={order._id} 
+                                <div
+                                    key={order._id}
                                     onClick={() => setSelectedOrder(order)}
                                     className="bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-750 border border-slate-200 dark:border-slate-700/60 hover:border-slate-300 dark:hover:border-slate-600 rounded-xl p-4 transition-all cursor-pointer shadow-sm relative group space-y-2"
                                 >
@@ -718,7 +717,7 @@ const OrderQueue = () => {
                                         </span>
 
                                         {order.payment_status === 'paid' ? (
-                                            <button 
+                                            <button
                                                 onClick={(e) => {
                                                     e.stopPropagation();
                                                     handleSettleOrder(order._id, order.payment_method || 'payos');
@@ -728,7 +727,7 @@ const OrderQueue = () => {
                                                 <span>✅ Đóng đơn</span>
                                             </button>
                                         ) : (
-                                            <button 
+                                            <button
                                                 onClick={(e) => {
                                                     e.stopPropagation();
                                                     setSettleModalOrder(order);
@@ -940,7 +939,7 @@ const OrderQueue = () => {
                                 </h3>
                                 <p className="text-xs text-slate-400 mt-0.5">Danh sách các phiên ca trực đã chốt khóa sổ của chi nhánh</p>
                             </div>
-                            <button 
+                            <button
                                 onClick={() => setShowHistoryModal(false)}
                                 className="text-slate-400 hover:text-white font-bold text-sm cursor-pointer"
                             >
@@ -1029,19 +1028,24 @@ const OrderQueue = () => {
                         </div>
 
                         <div className="grid grid-cols-2 gap-3 pt-3">
-                            <button 
+                            <button
                                 onClick={() => setSelectedOrder(null)}
                                 className="py-2.5 bg-slate-700 hover:bg-slate-650 text-slate-300 font-bold rounded-xl text-xs transition-colors cursor-pointer"
                             >
                                 Đóng cửa sổ
                             </button>
-                            <button 
+                            <button
                                 onClick={() => {
-                                    const targetCustId = selectedOrder.user_id || selectedOrder.customer_id || selectedOrder.created_by;
-                                    if (targetCustId) {
-                                        navigate(`/chat?customerId=${encodeURIComponent(targetCustId)}`);
+                                    const rawCustId = typeof selectedOrder.customer_id === 'object'
+                                        ? selectedOrder.customer_id?._id
+                                        : (selectedOrder.customer_id || selectedOrder.user_id);
+                                    const currentUserId = user?._id || user?.id;
+
+                                    // Nếu đơn hàng có ID khách hàng hợp lệ và không phải là ID của chính nhân viên tạo đơn tại quầy
+                                    if (rawCustId && rawCustId.toString() !== currentUserId?.toString()) {
+                                        navigate(`/chat?customerId=${encodeURIComponent(rawCustId.toString())}`);
                                     } else {
-                                        navigate('/chat');
+                                        alert('Đơn hàng này được lập tại quầy (Khách vãng lai/Trực tiếp), không có tài khoản Khách hàng online để nhắn tin.');
                                     }
                                 }}
                                 className="py-2.5 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-xl text-xs transition-colors flex items-center justify-center space-x-1 shadow-sm cursor-pointer"
@@ -1051,7 +1055,7 @@ const OrderQueue = () => {
                         </div>
 
                         {selectedOrder.status !== 'ready' && (
-                            <button 
+                            <button
                                 onClick={() => handleCancelOrder(selectedOrder._id)}
                                 className="w-full py-2 bg-red-950/40 text-red-400 border border-red-900/50 hover:bg-red-900/20 font-bold rounded-xl text-xs transition-colors cursor-pointer text-center"
                             >
@@ -1111,7 +1115,7 @@ const OrderQueue = () => {
                             </button>
                         </div>
 
-                        <button 
+                        <button
                             onClick={() => setSettleModalOrder(null)}
                             className="w-full py-2 bg-slate-700 hover:bg-slate-650 text-slate-300 font-bold rounded-xl text-xs transition-colors cursor-pointer text-center mt-2"
                         >

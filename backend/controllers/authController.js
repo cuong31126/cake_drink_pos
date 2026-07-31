@@ -1,5 +1,34 @@
 const User = require('../models/User');
+const ChatRoom = require('../models/ChatRoom');
 const jwt = require('jsonwebtoken');
+
+/**
+ * Hàm trợ năng tự động tạo sẵn phòng chat người thật & AI cho tài khoản mới
+ */
+const ensureUserChatRooms = async (userId, userRole = 'user') => {
+    try {
+        let humanRoom = await ChatRoom.findOne({ customer_id: userId, is_ai_room: false });
+        if (!humanRoom) {
+            await ChatRoom.create({
+                customer_id: userId,
+                user_role: userRole,
+                is_ai_room: false,
+                last_message: ""
+            });
+        }
+        let aiRoom = await ChatRoom.findOne({ customer_id: userId, is_ai_room: true });
+        if (!aiRoom) {
+            await ChatRoom.create({
+                customer_id: userId,
+                user_role: userRole,
+                is_ai_room: true,
+                last_message: ""
+            });
+        }
+    } catch (e) {
+        console.error("Lỗi tự động tạo phòng chat cho tài khoản mới:", e);
+    }
+};
 
 /**
  * Hàm trợ năng tạo nhanh Access Token (Hạn 7 ngày)
@@ -59,6 +88,9 @@ const register = async (req, res, next) => {
             role: 'user', // Mặc định tài khoản tự đăng ký là khách hàng online
             store_id: null
         });
+
+        // 💡 Tự động khởi tạo sẵn các phòng chat cho tài khoản mới
+        await ensureUserChatRooms(user._id.toString(), user.role);
 
         res.status(201).json({
             success: true,
@@ -204,6 +236,9 @@ const googleAuth = async (req, res, next) => {
             res.status(403);
             throw new Error('Tài khoản liên kết Google này hiện đang bị tạm khóa.');
         }
+
+        // 💡 Đảm bảo khởi tạo sẵn các phòng chat cho tài khoản
+        await ensureUserChatRooms(user._id.toString(), user.role);
 
         // Cấp phát Token truy cập hệ thống
         const accessToken = generateAccessToken(user._id);
