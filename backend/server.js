@@ -13,11 +13,15 @@ connectDB();
 app.use(cors()); // Cho phép Frontend từ Port khác (Ví dụ Vite React Port 5173) gọi API sang
 app.use(express.json()); // Cho phép Express đọc cấu hình dữ liệu dạng JSON từ Request Body
 
-// Đăng ký các phân cấp tuyến đường API hệ thống (Hỗ trợ tiền tố v1 và fallback trực tiếp)
+// Đăng ký các phân cấp tuyến đường API hệ thống
+const webhooksRoutes = require('./routes/webhooks');
+app.use('/api/webhooks', webhooksRoutes); // Nhánh webhook công cộng nhận tín hiệu PayOS
+app.use('/api/v1/webhooks', webhooksRoutes);
+app.use('/webhooks', webhooksRoutes);
+
 const apiRoutes = require('./routes/api');
 app.use('/api/v1', apiRoutes); // Đầy đủ tiền tố chuẩn: /api/v1/auth/google
 app.use('/api', apiRoutes);    // Tiền tố ngắn: /api/auth/google
-app.use('/api/webhooks', require('./routes/webhooks')); // Nhánh webhook công cộng nhận tín hiệu PayOS
 
 // Định tuyến cơ bản kiểm tra trạng thái hoạt động của Server
 app.get('/', (req, res) => {
