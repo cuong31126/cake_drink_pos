@@ -309,6 +309,35 @@ const getOrderById = async (req, res, next) => {
       res.status(404);
       throw new Error('Không tìm thấy đơn hàng yêu cầu.');
     }
+
+    // Nếu đơn chưa thanh toán nhưng đã tạo PayOS orderCode, tự động hỏi trực tiếp API PayOS
+    if (order.payment_status !== 'paid' && order.payos_order_code) {
+      try {
+        let payosData = null;
+        if (payos?.paymentRequests?.get) {
+          payosData = await payos.paymentRequests.get(order.payos_order_code);
+        } else if (payos?.getPaymentLinkInformation) {
+          payosData = await payos.getPaymentLinkInformation(order.payos_order_code);
+        }
+
+        if (payosData && (payosData.status === 'PAID' || payosData.amountPaid >= order.final_total)) {
+          order.payment_status = 'paid';
+          order.status = 'completed';
+          order.payment_method = 'payos';
+          await order.save();
+
+          if (order.table_id) {
+            await Table.findByIdAndUpdate(order.table_id, {
+              status: 'available',
+              current_order_id: null
+            });
+          }
+        }
+      } catch (checkErr) {
+        // Ignored if order is not paid yet on PayOS
+      }
+    }
+
     res.status(200).json({
       success: true,
       data: order
@@ -667,11 +696,13 @@ const createPayOSPaymentLink = async (req, res, next) => {
 
     let paymentLinkResponse = null;
     try {
-      if (payos && payos.createPaymentLink) {
+      if (payos?.paymentRequests?.create) {
+        paymentLinkResponse = await payos.paymentRequests.create(paymentData);
+      } else if (payos?.createPaymentLink) {
         paymentLinkResponse = await payos.createPaymentLink(paymentData);
       }
     } catch (payosErr) {
-      console.warn(`[PayOS SDK Warning]: ${payosErr.message}`);
+      console.error(`[PayOS SDK Error]: ${payosErr.message}`);
     }
 
     order.payos_order_code = orderCode;

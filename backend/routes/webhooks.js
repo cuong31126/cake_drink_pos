@@ -28,8 +28,13 @@ const handlePayOSWebhook = async (req, res, next) => {
 
     // 1. Kiểm tra tính hợp lệ và chữ ký bảo mật Webhook (Checksum) qua PayOS SDK
     try {
-      if (process.env.PAYOS_CHECKSUM_KEY && payos.verifyWebhookData) {
-        const verifiedData = payos.verifyWebhookData(webhookBody);
+      if (process.env.PAYOS_CHECKSUM_KEY) {
+        let verifiedData = null;
+        if (payos?.webhooks?.verify) {
+          verifiedData = payos.webhooks.verify(webhookBody);
+        } else if (payos?.verifyWebhookData) {
+          verifiedData = payos.verifyWebhookData(webhookBody);
+        }
         if (verifiedData) {
           webhookData = verifiedData;
         }
