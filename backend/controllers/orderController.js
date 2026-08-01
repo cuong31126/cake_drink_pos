@@ -681,6 +681,9 @@ const createPayOSPaymentLink = async (req, res, next) => {
     const origin = req.headers.origin || 'https://cake-drink-pos.vercel.app';
     const descriptionStr = `Thanh Toan Don ${order._id.slice(-6).toUpperCase()}`.slice(0, 25);
 
+    const isCustomer = req.user && req.user.role === 'user';
+    const redirectPath = isCustomer ? '/my-orders' : '/queue';
+
     const paymentData = {
       orderCode,
       amount: Math.max(Number(order.final_total) || 1000, 1000),
@@ -690,8 +693,8 @@ const createPayOSPaymentLink = async (req, res, next) => {
         quantity: Number(item.quantity) || 1,
         price: Number(item.price) || 0
       })),
-      cancelUrl: `${origin}/queue`,
-      returnUrl: `${origin}/queue`
+      cancelUrl: `${origin}${redirectPath}`,
+      returnUrl: `${origin}${redirectPath}`
     };
 
     let paymentLinkResponse = null;

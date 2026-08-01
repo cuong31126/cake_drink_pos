@@ -29,6 +29,14 @@ const OrderQueue = () => {
     const [isVerifyingPayOS, setIsVerifyingPayOS] = useState(false);
     const [payosLinkData, setPayosLinkData] = useState(null);
 
+    // 🔒 BẢO MẬT: Chặn không cho Khách hàng (role === 'user') truy cập giao diện Nhân viên quầy (/queue)
+    useEffect(() => {
+        if (userRole === 'user') {
+            toast.error("Bạn không có quyền truy cập trang quản lý đơn của Nhân viên!");
+            navigate('/my-orders');
+        }
+    }, [userRole, navigate]);
+
     // 💳 TỰ ĐỘNG GỌI API SDK PAYOS ĐỂ KHỞI TẠO PAYMENT LINK CHÍNH THỨC
     useEffect(() => {
         if (qrVerifyingOrder?._id) {
