@@ -546,7 +546,7 @@ const OrderMenu = () => {
                                     disabled={isOutOfStock}
                                     className={`w-full py-2.5 rounded-xl text-xs font-bold transition-all shadow-2xs ${isOutOfStock ? 'bg-gray-300 dark:bg-slate-800 text-gray-500 dark:text-slate-500 cursor-not-allowed' : 'cursor-pointer active:scale-95 bg-blue-600 hover:bg-blue-700 text-white'}`}
                                 >
-                                    {isOutOfStock ? (isBranchDisabled ? '🚫 Ngừng bán tại CN này' : '🚫 Hết hàng tại chi nhánh') : '+ Chọn món & Chỉnh thuộc tính'}
+                                    {isOutOfStock ? (isBranchDisabled ? '🚫 Ngừng bán tại CN này' : '🚫 Hết hàng tại chi nhánh') : '+ Chọn món'}
                                 </button>
                             </div>
                         )
@@ -589,7 +589,7 @@ const OrderMenu = () => {
                                         }`}
                                 >
                                     <span>🍽️</span>
-                                    <span>Ăn tại quán</span>
+                                    <span>Mua tại quán</span>
                                 </button>
 
                                 <button
@@ -833,8 +833,8 @@ const OrderMenu = () => {
                                     }
                                 }}
                                 className={`w-full py-3 font-black rounded-xl text-xs shadow-md transition-all cursor-pointer border ${cart.length > 0
-                                        ? 'bg-amber-500 hover:bg-amber-600 text-slate-950 border-amber-400'
-                                        : 'bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-500 border-slate-300 dark:border-slate-700 cursor-not-allowed'
+                                    ? 'bg-amber-500 hover:bg-amber-600 text-slate-950 border-amber-400'
+                                    : 'bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-500 border-slate-300 dark:border-slate-700 cursor-not-allowed'
                                     }`}
                             >
                                 ✅ XÁC NHẬN ĐƠN HÀNG

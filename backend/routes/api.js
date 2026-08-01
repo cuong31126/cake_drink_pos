@@ -61,7 +61,8 @@ const {
   readyOrder,
   confirmOrder,
   deleteOrder,
-  createPayOSPaymentLink
+  createPayOSPaymentLink,
+  updateOrderNoteAndFlag
 } = require('../controllers/orderController');
 
 const {
@@ -169,6 +170,7 @@ router.post('/orders/:id/accept', protect, authorize('admin', 'staff'), acceptOr
 router.post('/orders/:id/ready', protect, authorize('admin', 'staff'), readyOrder);
 router.post('/orders/:id/confirm', protect, confirmOrder);
 router.post('/orders/:id/payos-link', protect, createPayOSPaymentLink);
+router.patch('/orders/:id/flag', protect, authorize('admin', 'staff'), updateOrderNoteAndFlag);
 router.delete('/orders/:id', protect, authorize('admin'), deleteOrder);
 
 // ==========================================

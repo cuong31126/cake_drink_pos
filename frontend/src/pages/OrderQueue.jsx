@@ -428,9 +428,18 @@ const OrderQueue = () => {
         return matchesSearch && matchesType;
     });
 
-    const pendingOrdersList = filteredOrders.filter(o => o.status === 'pending_confirm');
-    const servingOrdersList = filteredOrders.filter(o => o.status === 'serving');
-    const readyOrdersList = filteredOrders.filter(o => o.status === 'ready');
+    // 📋 Sắp xếp đơn hàng theo thứ tự thời gian tăng dần (cũ nhất ở trên cùng, ĐƠN HÀNG MỚI NHẤT NẰM Ở DƯỚI CÙNG)
+    const pendingOrdersList = filteredOrders
+        .filter(o => o.status === 'pending_confirm')
+        .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+
+    const servingOrdersList = filteredOrders
+        .filter(o => o.status === 'serving')
+        .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+
+    const readyOrdersList = filteredOrders
+        .filter(o => o.status === 'ready')
+        .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
 
     return (
         <div className="min-h-screen transition-colors duration-300 bg-slate-100 dark:bg-slate-900 text-slate-800 dark:text-slate-100 pt-16 flex relative font-sans">

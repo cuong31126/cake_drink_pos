@@ -123,6 +123,18 @@ const orderSchema = new mongoose.Schema({
     type: Number,
     default: null
   },
+  note: {
+    type: String,
+    default: ""
+  },
+  is_flagged: {
+    type: Boolean,
+    default: false
+  },
+  flag_reason: {
+    type: String,
+    default: ""
+  },
   cancelled_items: [cancelledItemSchema]
 }, {
   timestamps: true

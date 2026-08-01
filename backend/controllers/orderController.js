@@ -37,6 +37,34 @@ const deductProductStock = async (storeId, items) => {
 };
 
 /**
+ * 💡 Hàm phụ trợ: Tự động HOÀN LẠI tồn kho sản phẩm theo chi nhánh khi đơn hàng bị HỦY hoặc giảm món
+ */
+const restoreProductStock = async (storeId, items) => {
+  if (!ENABLE_AUTO_STOCK_DEDUCTION) return; // 💡 Bị chặn nếu công tắc đang tắt (false)
+  if (!items || items.length === 0) return;
+  try {
+    for (const item of items) {
+      const productId = item.product_id || item._id;
+      if (!productId) continue;
+      
+      const restoreQty = item.quantity || 1;
+      // Cộng lại số lượng tồn kho nguyên tử theo chi nhánh
+      await Product.updateOne(
+        { _id: productId, "inventory.store_id": storeId },
+        { $inc: { "inventory.$.stock": restoreQty } }
+      );
+      // Nếu sản phẩm từng bị hết hàng (is_available = false), bật lại is_available = true khi đã có tồn kho > 0
+      await Product.updateOne(
+        { _id: productId, "inventory.store_id": storeId, "inventory.stock": { $gt: 0 } },
+        { $set: { "inventory.$.is_available": true } }
+      );
+    }
+  } catch (err) {
+    console.error("Lỗi tự động hoàn tồn kho:", err);
+  }
+};
+
+/**
  * @desc    Mở bàn ăn, Khởi tạo đơn hàng nháp tại quán (Trạng thái bàn chuyển sang occupied)
  * @route   POST /api/v1/orders/dine-in
  * @access  Private (Staff/Admin)
@@ -251,7 +279,10 @@ const editOrderItemsWithLog = async (req, res, next) => {
       }
     }
 
-    // Duyệt qua mảng món cũ trong DB để so sánh đối chiếu tìm ra các món bị giảm/xóa
+    // Duyệt qua mảng món cũ trong DB để so sánh đối chiếu tìm ra các món bị giảm/xóa để hoàn tồn kho
+    const itemsToRestore = [];
+    const itemsToDeduct = [];
+
     order.items.forEach(oldItem => {
       // Tìm xem món cũ này còn nằm trong mảng cập nhật mới gửi lên không
       const matchedNewItem = updated_items.find(newItem => newItem.product_id === oldItem.product_id);
@@ -265,6 +296,7 @@ const editOrderItemsWithLog = async (req, res, next) => {
           reason: reason || 'Hủy bỏ món ăn khỏi bàn',
           updated_by: admin_approver_id || req.user._id
         });
+        itemsToRestore.push({ product_id: oldItem.product_id, quantity: oldItem.quantity });
       } else if (matchedNewItem.quantity < oldItem.quantity) {
         // Trường hợp 2: Số lượng của món ăn bị CẮT GIẢM bớt đi
         const diffQuantity = oldItem.quantity - matchedNewItem.quantity;
@@ -275,8 +307,28 @@ const editOrderItemsWithLog = async (req, res, next) => {
           reason: reason || 'Giảm bớt số lượng phần ăn',
           updated_by: admin_approver_id || req.user._id
         });
+        itemsToRestore.push({ product_id: oldItem.product_id, quantity: diffQuantity });
+      } else if (matchedNewItem.quantity > oldItem.quantity) {
+        // Trường hợp 3: Số lượng món ăn được TĂNG LÊN
+        const diffQuantity = matchedNewItem.quantity - oldItem.quantity;
+        itemsToDeduct.push({ product_id: matchedNewItem.product_id, quantity: diffQuantity });
       }
     });
+
+    // Kiểm tra món mới hoàn toàn được thêm vào
+    updated_items.forEach(newItem => {
+      const oldItem = order.items.find(o => o.product_id === newItem.product_id);
+      if (!oldItem) {
+        itemsToDeduct.push({ product_id: newItem.product_id, quantity: newItem.quantity });
+      }
+    });
+
+    if (itemsToRestore.length > 0) {
+      await restoreProductStock(order.store_id || 'store_Q1', itemsToRestore);
+    }
+    if (itemsToDeduct.length > 0) {
+      await deductProductStock(order.store_id || 'store_Q1', itemsToDeduct);
+    }
 
     // Tiến hành ghi đè mảng items mới và tính toán lại bài toán dòng tiền tài chính
     order.items = updated_items;
@@ -416,6 +468,11 @@ const cancelOrder = async (req, res, next) => {
       throw new Error('Không tìm thấy đơn hàng yêu cầu.');
     }
 
+    if (order.status === 'cancelled') {
+      res.status(400);
+      throw new Error('Đơn hàng này đã bị hủy trước đó.');
+    }
+
     // 🔒 RỦI RO 1: Kiểm tra quyền sở hữu đơn hàng (Ownership Security Check)
     if (req.user && req.user.role === 'user') {
       const isOwner = (order.customer_id && order.customer_id.toString() === req.user._id.toString()) ||
@@ -432,6 +489,9 @@ const cancelOrder = async (req, res, next) => {
       throw new Error('Đơn hàng đã được Nhân viên tiếp nhận và Bếp đang chế biến. Bạn không thể tự hủy đơn nữa, vui lòng nhắn tin cho Nhân viên để hỗ trợ!');
     }
 
+    // 🔄 TỰ ĐỘNG HOÀN LẠI TỒN KHO CHO CÁC SẢN PHẨM TRONG ĐƠN BỊ HỦY
+    await restoreProductStock(order.store_id || 'store_Q1', order.items);
+
     order.status = 'cancelled';
     await order.save();
 
@@ -444,7 +504,7 @@ const cancelOrder = async (req, res, next) => {
 
     res.status(200).json({
       success: true,
-      message: 'Hủy đơn hàng thành công và giải phóng bàn ăn.',
+      message: 'Hủy đơn hàng thành công, đã hoàn trả lại tồn kho sản phẩm và giải phóng bàn ăn.',
       data: order
     });
   } catch (error) {
@@ -650,6 +710,11 @@ const deleteOrder = async (req, res, next) => {
       }
     }
 
+    // Hoàn lại tồn kho nếu đơn hàng bị xóa chưa được hoàn/hủy trước đó
+    if (order.status !== 'cancelled' && order.status !== 'completed') {
+      await restoreProductStock(order.store_id || 'store_Q1', order.items);
+    }
+
     await Order.findByIdAndDelete(req.params.id);
 
     res.status(200).json({
@@ -733,6 +798,36 @@ const createPayOSPaymentLink = async (req, res, next) => {
   }
 };
 
+/**
+ * @desc    Cập nhật Ghi chú & Đánh cờ cảnh báo nghi vấn đơn hàng có vấn đề
+ * @route   PATCH /api/v1/orders/:id/flag
+ * @access  Private (Staff/Admin)
+ */
+const updateOrderNoteAndFlag = async (req, res, next) => {
+  try {
+    const { note, is_flagged, flag_reason } = req.body;
+    const order = await Order.findById(req.params.id);
+    if (!order) {
+      res.status(404);
+      throw new Error('Không tìm thấy hóa đơn cần cập nhật.');
+    }
+
+    if (note !== undefined) order.note = note;
+    if (is_flagged !== undefined) order.is_flagged = is_flagged;
+    if (flag_reason !== undefined) order.flag_reason = flag_reason;
+
+    await order.save();
+
+    res.status(200).json({
+      success: true,
+      message: is_flagged ? '🚩 Đã đánh cờ cảnh báo đơn hàng!' : '✅ Đã cập nhật ghi chú đơn hàng.',
+      data: order
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = { 
   createDineInOrder,
   createTakeAwayOrder,
@@ -748,5 +843,6 @@ module.exports = {
   readyOrder,
   confirmOrder,
   deleteOrder,
-  createPayOSPaymentLink
+  createPayOSPaymentLink,
+  updateOrderNoteAndFlag
 };

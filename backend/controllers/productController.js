@@ -1,17 +1,36 @@
 const Product = require('../models/Product');
 const Category = require('../models/Category');
+const { getCache, setCache, deleteCache } = require('../config/redis');
 
 /**
- * @desc    Lấy danh sách tất cả sản phẩm bánh & nước đang bán
+ * @desc    Lấy danh sách tất cả sản phẩm bánh & nước đang bán (Tích hợp Redis Cache)
  * @route   GET /api/v1/products
  * @access  Private
  */
 const getProducts = async (req, res, next) => {
   try {
+    const cacheKey = 'products_all_menu';
+
+    // ⚡ BƯỚC 1: Thử lấy dữ liệu từ Redis Cache
+    const cachedProducts = await getCache(cacheKey);
+    if (cachedProducts) {
+      return res.status(200).json({
+        success: true,
+        source: 'redis_cache',
+        count: cachedProducts.length,
+        data: cachedProducts
+      });
+    }
+
+    // 📦 BƯỚC 2: Nếu chưa có Cache -> Lấy từ MongoDB Atlas
     const products = await Product.find({ status: 'selling' }).sort({ name: 1 });
+
+    // 💾 BƯỚC 3: Lưu dữ liệu vào Redis Cache trong 5 phút (300s)
+    await setCache(cacheKey, products, 300);
 
     res.status(200).json({
       success: true,
+      source: 'mongodb',
       count: products.length,
       data: products
     });
@@ -50,6 +69,10 @@ const getProductById = async (req, res, next) => {
 const createProduct = async (req, res, next) => {
   try {
     const newProduct = await Product.create(req.body);
+    
+    // 🧹 Xóa cache thực đơn cũ khi thêm món mới
+    await deleteCache('products_all_menu');
+
     res.status(201).json({
       success: true,
       data: newProduct
@@ -72,6 +95,9 @@ const updateProduct = async (req, res, next) => {
       throw new Error('Không tìm thấy sản phẩm để cập nhật.');
     }
 
+    // 🧹 Xóa cache thực đơn cũ để đồng bộ giá mới
+    await deleteCache('products_all_menu');
+
     res.status(200).json({
       success: true,
       data: updated
@@ -93,6 +119,9 @@ const deleteProduct = async (req, res, next) => {
       res.status(404);
       throw new Error('Không tìm thấy sản phẩm.');
     }
+
+    // 🧹 Xóa cache thực đơn cũ
+    await deleteCache('products_all_menu');
 
     res.status(200).json({
       success: true,
@@ -129,7 +158,7 @@ const updateProductStock = async (req, res, next) => {
       product.inventory.push({ store_id, stock: stockNum, is_available: isAvail });
     }
 
-    // ⚡ TỰ ĐỘNG ĐỒNG BỘ TRẠNG THÁI STATUS TỔNG CỦA MÓN ÁN (SELLING / OUT_OF_STOCK)
+    // ⚡ TỰ ĐỘNG ĐỒNG BỘ TRẠNG THÁI STATUS TỔNG CỦA MÓN ĂN (SELLING / OUT_OF_STOCK)
     const totalStock = (product.inventory || []).reduce((sum, inv) => sum + (inv.stock || 0), 0);
     if (totalStock <= 0) {
       product.status = 'out_of_stock';
@@ -138,6 +167,10 @@ const updateProductStock = async (req, res, next) => {
     }
 
     await product.save();
+
+    // 🧹 Xóa cache thực đơn cũ khi tồn kho thay đổi
+    await deleteCache('products_all_menu');
+
     res.status(200).json({
       success: true,
       data: product
@@ -205,6 +238,9 @@ const toggleProductStatus = async (req, res, next) => {
     }
 
     const updatedProduct = await product.save();
+
+    // 🧹 Xóa cache thực đơn cũ khi chuyển trạng thái
+    await deleteCache('products_all_menu');
 
     res.status(200).json({
       success: true,

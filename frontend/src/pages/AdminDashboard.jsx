@@ -8,7 +8,8 @@ const AdminDashboard = () => {
   const [activeTab, setActiveTab] = useState('overview'); // 'overview' | 'products' | 'users'
 
   // Tab 1: Overview States
-  const [revenueStats, setRevenueStats] = useState({ totalRevenue: 0, totalOrders: 0, averageBill: 0 });
+  const [overviewStoreFilter, setOverviewStoreFilter] = useState('all'); // 'all' | 'store_Q1' | 'store_ThuDuc'
+  const [revenueStats, setRevenueStats] = useState({ totalRevenue: 0, totalOrders: 0, averageBill: 0, storeBreakdown: {} });
   const [topProducts, setTopProducts] = useState([]);
   const [slowProducts, setSlowProducts] = useState([]);
   const [lowStockAlerts, setLowStockAlerts] = useState([]);
@@ -60,10 +61,10 @@ const AdminDashboard = () => {
     try {
       setLoading(true);
       const [revRes, topRes, slowRes, stockRes] = await Promise.all([
-        API.get('/dashboard/revenue-stats'),
-        API.get('/dashboard/top-selling'),
-        API.get('/dashboard/slow-moving'),
-        API.get('/dashboard/low-stock')
+        API.get(`/dashboard/revenue-stats?store_id=${overviewStoreFilter}`),
+        API.get(`/dashboard/top-selling?store_id=${overviewStoreFilter}`),
+        API.get(`/dashboard/slow-moving?store_id=${overviewStoreFilter}`),
+        API.get(`/dashboard/low-stock?store_id=${overviewStoreFilter}`)
       ]);
 
       if (revRes.data.success) setRevenueStats(revRes.data.data);
@@ -124,6 +125,10 @@ const AdminDashboard = () => {
     fetchProducts();
     fetchUsers();
   }, []);
+
+  useEffect(() => {
+    fetchDashboardData();
+  }, [overviewStoreFilter]);
 
   useEffect(() => {
     if (activeTab === 'inventory') {
@@ -469,27 +474,176 @@ const AdminDashboard = () => {
       </div>
 
       {/* ========================================================
-          📊 TAB 1: BÁO CÁO DOANH THU & THỐNG KÊ TÀI CHÍNH
+          📊 TAB 1: BÁO CÁO DOANH THU & THỐNG KÊ TÀI CHÍNH (PHÂN THEO CỬA HÀNG / CHI NHÁNH)
          ======================================================== */}
       {activeTab === 'overview' && (
         <div className="space-y-8 animate-in fade-in duration-150">
+          
+          {/* 🏢 BỘ LỌC CHI NHÁNH CỬA HÀNG */}
+          <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-gray-200 dark:border-slate-800 shadow-2xs flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center space-x-2">
+              <span className="text-sm font-black text-gray-800 dark:text-slate-100 uppercase tracking-wide">🏢 Lọc Doanh Thu Theo Chi Nhánh:</span>
+              <span className="text-xs text-gray-400 dark:text-slate-400 font-medium">(Phân tích chi tiết từng cửa hàng)</span>
+            </div>
+            
+            <div className="flex gap-2">
+              <button
+                onClick={() => setOverviewStoreFilter('all')}
+                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer border ${
+                  overviewStoreFilter === 'all'
+                    ? 'bg-purple-600 text-white border-purple-600 shadow-xs'
+                    : 'bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-slate-300 border-gray-200 dark:border-slate-700 hover:bg-gray-200'
+                }`}
+              >
+                🏢 Tất cả cửa hàng
+              </button>
+              <button
+                onClick={() => setOverviewStoreFilter('store_Q1')}
+                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer border ${
+                  overviewStoreFilter === 'store_Q1'
+                    ? 'bg-purple-600 text-white border-purple-600 shadow-xs'
+                    : 'bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-slate-300 border-gray-200 dark:border-slate-700 hover:bg-gray-200'
+                }`}
+              >
+                📍 Chi nhánh 1 (Quận 1)
+              </button>
+              <button
+                onClick={() => setOverviewStoreFilter('store_ThuDuc')}
+                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer border ${
+                  overviewStoreFilter === 'store_ThuDuc'
+                    ? 'bg-purple-600 text-white border-purple-600 shadow-xs'
+                    : 'bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-slate-300 border-gray-200 dark:border-slate-700 hover:bg-gray-200'
+                }`}
+              >
+                📍 Chi nhánh 2 (Thủ Đức)
+              </button>
+            </div>
+          </div>
+
+          {/* 📊 3 THẺ TỔNG QUAN TÀI CHÍNH */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-gray-200 dark:border-slate-800 shadow-2xs hover:shadow-md transition-shadow">
               <div className="text-xs font-bold text-gray-400 dark:text-slate-400 uppercase tracking-wider">Tổng Doanh Thu Hóa Đơn</div>
               <div className="text-3xl font-black text-gray-800 dark:text-slate-100 mt-2">{(revenueStats.totalRevenue || 0).toLocaleString()} đ</div>
-              <div className="text-[11px] text-green-600 dark:text-green-400 font-bold mt-1">↑ Dữ liệu tổng hợp trực tiếp từ DB</div>
+              <div className="text-[11px] text-green-600 dark:text-green-400 font-bold mt-1">
+                ↑ {overviewStoreFilter === 'all' ? 'Tổng 2 cửa hàng' : overviewStoreFilter === 'store_Q1' ? 'Doanh thu Chi nhánh 1 - Quận 1' : 'Doanh thu Chi nhánh 2 - Thủ Đức'}
+              </div>
             </div>
             
             <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-gray-200 dark:border-slate-800 shadow-2xs hover:shadow-md transition-shadow">
               <div className="text-xs font-bold text-gray-400 dark:text-slate-400 uppercase tracking-wider">Hóa Đơn Hoàn Thành</div>
               <div className="text-3xl font-black text-gray-800 dark:text-slate-100 mt-2">{revenueStats.totalOrders || 0} đơn</div>
-              <div className="text-[11px] text-gray-400 dark:text-slate-400 font-medium mt-1">Hóa đơn đã chốt và chuyển khoản thành công</div>
+              <div className="text-[11px] text-gray-400 dark:text-slate-400 font-medium mt-1">Hóa đơn đã chốt và hoàn tất thanh toán</div>
             </div>
 
             <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-gray-200 dark:border-slate-800 shadow-2xs hover:shadow-md transition-shadow">
               <div className="text-xs font-bold text-gray-400 dark:text-slate-400 uppercase tracking-wider">Giá trị đơn trung bình</div>
               <div className="text-3xl font-black text-amber-600 dark:text-amber-400 mt-2">{(revenueStats.averageBill || 0).toLocaleString()} đ</div>
-              <div className="text-[11px] text-blue-600 dark:text-blue-400 font-bold mt-1">Sức tiêu dùng thực tế tại các bàn</div>
+              <div className="text-[11px] text-blue-600 dark:text-blue-400 font-bold mt-1">Mức tiêu dùng trung bình / đơn</div>
+            </div>
+          </div>
+
+          {/* 🏪 BẢNG THỐNG KÊ DOANH THU THEO ĐƠN VỊ CỬA HÀNG (STORE BREAKDOWN) */}
+          <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-gray-200 dark:border-slate-800 shadow-2xs space-y-4">
+            <div className="flex justify-between items-center border-b border-gray-100 dark:border-slate-800 pb-3">
+              <div>
+                <h3 className="text-sm font-black text-gray-800 dark:text-slate-100 uppercase tracking-wider flex items-center gap-2">
+                  <span>🏪 Phân Tích Doanh Thu Theo Đơn Vị Cửa Hàng (2 Chi Nhánh)</span>
+                </h3>
+                <p className="text-xs text-gray-400 dark:text-slate-400 mt-0.5">So sánh hiệu quả kinh doanh và tỷ trọng đóng góp doanh thu giữa các chi nhánh</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Thẻ Chi nhánh 1 - Quận 1 */}
+              <div className="bg-gradient-to-br from-purple-50 to-indigo-50 dark:from-purple-950/40 dark:to-indigo-950/40 p-5 rounded-2xl border border-purple-200 dark:border-purple-900/50 space-y-3">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase bg-purple-200 dark:bg-purple-900 text-purple-800 dark:text-purple-200">
+                      📍 CHI NHÁNH 1
+                    </span>
+                    <h4 className="font-black text-base text-gray-900 dark:text-slate-100 mt-1">Chi nhánh Quận 1</h4>
+                  </div>
+                  <span className="text-xs font-black text-purple-600 dark:text-purple-400 bg-white dark:bg-slate-900 px-2.5 py-1 rounded-xl shadow-2xs border border-purple-100 dark:border-purple-800">
+                    Tỷ trọng: {revenueStats.storeBreakdown?.store_Q1?.percentage || 0}%
+                  </span>
+                </div>
+
+                <div className="flex justify-between items-baseline pt-2">
+                  <span className="text-xs text-gray-500 dark:text-slate-400 font-bold">Doanh thu:</span>
+                  <span className="text-2xl font-black text-purple-700 dark:text-purple-300">
+                    {(revenueStats.storeBreakdown?.store_Q1?.revenue || 0).toLocaleString()} đ
+                  </span>
+                </div>
+
+                <div className="flex justify-between text-xs text-gray-600 dark:text-slate-400 font-medium">
+                  <span>Số lượng đơn:</span>
+                  <span className="font-bold text-gray-900 dark:text-slate-200">{revenueStats.storeBreakdown?.store_Q1?.orders || 0} đơn</span>
+                </div>
+
+                {/* Thanh tiến trình tỷ trọng */}
+                <div className="w-full bg-purple-200/60 dark:bg-purple-900/60 h-2.5 rounded-full overflow-hidden">
+                  <div
+                    className="bg-purple-600 h-full rounded-full transition-all duration-500"
+                    style={{ width: `${revenueStats.storeBreakdown?.store_Q1?.percentage || 0}%` }}
+                  ></div>
+                </div>
+              </div>
+
+              {/* Thẻ Chi nhánh 2 - Thủ Đức */}
+              <div className="bg-gradient-to-br from-blue-50 to-teal-50 dark:from-blue-950/40 dark:to-teal-950/40 p-5 rounded-2xl border border-blue-200 dark:border-blue-900/50 space-y-3">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase bg-blue-200 dark:bg-blue-900 text-blue-800 dark:text-blue-200">
+                      📍 CHI NHÁNH 2
+                    </span>
+                    <h4 className="font-black text-base text-gray-900 dark:text-slate-100 mt-1">Chi nhánh Thủ Đức</h4>
+                  </div>
+                  <span className="text-xs font-black text-blue-600 dark:text-blue-400 bg-white dark:bg-slate-900 px-2.5 py-1 rounded-xl shadow-2xs border border-blue-100 dark:border-blue-800">
+                    Tỷ trọng: {revenueStats.storeBreakdown?.store_ThuDuc?.percentage || 0}%
+                  </span>
+                </div>
+
+                <div className="flex justify-between items-baseline pt-2">
+                  <span className="text-xs text-gray-500 dark:text-slate-400 font-bold">Doanh thu:</span>
+                  <span className="text-2xl font-black text-blue-700 dark:text-blue-300">
+                    {(revenueStats.storeBreakdown?.store_ThuDuc?.revenue || 0).toLocaleString()} đ
+                  </span>
+                </div>
+
+                <div className="flex justify-between text-xs text-gray-600 dark:text-slate-400 font-medium">
+                  <span>Số lượng đơn:</span>
+                  <span className="font-bold text-gray-900 dark:text-slate-200">{revenueStats.storeBreakdown?.store_ThuDuc?.orders || 0} đơn</span>
+                </div>
+
+                {/* Thanh tiến trình tỷ trọng */}
+                <div className="w-full bg-blue-200/60 dark:bg-blue-900/60 h-2.5 rounded-full overflow-hidden">
+                  <div
+                    className="bg-blue-600 h-full rounded-full transition-all duration-500"
+                    style={{ width: `${revenueStats.storeBreakdown?.store_ThuDuc?.percentage || 0}%` }}
+                  ></div>
+                </div>
+              </div>
+            </div>
+
+            {/* Thống kê bổ sung: Hình thức thanh toán & Loại đơn */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-3 border-t border-gray-100 dark:border-slate-800 text-xs">
+              <div className="bg-gray-50 dark:bg-slate-800/60 p-3 rounded-xl border border-gray-100 dark:border-slate-700/60 space-y-1">
+                <span className="text-gray-400 dark:text-slate-400 font-bold text-[10px] uppercase">💵 Tiền mặt tại quầy</span>
+                <div className="font-black text-slate-800 dark:text-slate-100 text-sm">{(revenueStats.cashRevenue || 0).toLocaleString()} đ</div>
+              </div>
+              <div className="bg-gray-50 dark:bg-slate-800/60 p-3 rounded-xl border border-gray-100 dark:border-slate-700/60 space-y-1">
+                <span className="text-gray-400 dark:text-slate-400 font-bold text-[10px] uppercase">💳 QR PayOS / CK</span>
+                <div className="font-black text-emerald-600 dark:text-emerald-400 text-sm">{(revenueStats.bankingRevenue || 0).toLocaleString()} đ</div>
+              </div>
+              <div className="bg-gray-50 dark:bg-slate-800/60 p-3 rounded-xl border border-gray-100 dark:border-slate-700/60 space-y-1">
+                <span className="text-gray-400 dark:text-slate-400 font-bold text-[10px] uppercase">🍽️ Đơn tại bàn</span>
+                <div className="font-black text-purple-600 dark:text-purple-400 text-sm">{revenueStats.dineInCount || 0} đơn</div>
+              </div>
+              <div className="bg-gray-50 dark:bg-slate-800/60 p-3 rounded-xl border border-gray-100 dark:border-slate-700/60 space-y-1">
+                <span className="text-gray-400 dark:text-slate-400 font-bold text-[10px] uppercase">🛵 Đơn mang đi</span>
+                <div className="font-black text-amber-600 dark:text-amber-400 text-sm">{revenueStats.takeAwayCount || 0} đơn</div>
+              </div>
             </div>
           </div>
 
