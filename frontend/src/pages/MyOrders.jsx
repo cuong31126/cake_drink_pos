@@ -106,6 +106,12 @@ const MyOrders = () => {
     return `https://img.vietqr.io/image/${BANK_BIN}-${ACCOUNT_NUMBER}-compact2.png?amount=${order.final_total}&addInfo=${addInfo}&accountName=${encodeURIComponent(ACCOUNT_NAME)}`;
   };
 
+  const formatDisplayQR = (qr, fallback) => {
+    if (!qr) return fallback;
+    if (qr.startsWith('http') || qr.startsWith('data:')) return qr;
+    return `https://api.qrserver.com/v1/create-qr-code/?size=350x350&data=${encodeURIComponent(qr)}`;
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 pt-24 sm:pt-28 pb-12 font-sans">
       <div className="max-w-4xl mx-auto px-3 sm:px-4 space-y-4 sm:space-y-6">
@@ -344,7 +350,7 @@ const MyOrders = () => {
 
                   <div className="bg-white p-2.5 rounded-xl shadow-md border border-slate-200">
                     <img
-                      src={myOrdersPayosData?.qrCode || getQRUrl(selectedOrder)}
+                      src={formatDisplayQR(myOrdersPayosData?.qrCode, getQRUrl(selectedOrder))}
                       alt="PayOS VietQR"
                       className="w-48 h-48 object-contain"
                     />

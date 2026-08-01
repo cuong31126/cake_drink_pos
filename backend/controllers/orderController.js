@@ -709,12 +709,19 @@ const createPayOSPaymentLink = async (req, res, next) => {
     order.payment_method = 'payos';
     await order.save();
 
+    let rawQrCode = paymentLinkResponse?.qrCode || null;
+    let qrCodeUrl = rawQrCode;
+    if (rawQrCode && !rawQrCode.startsWith('http') && !rawQrCode.startsWith('data:')) {
+      qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=350x350&data=${encodeURIComponent(rawQrCode)}`;
+    }
+
     res.status(200).json({
       success: true,
       data: {
         orderCode,
         checkoutUrl: paymentLinkResponse?.checkoutUrl || null,
-        qrCode: paymentLinkResponse?.qrCode || null,
+        qrCode: qrCodeUrl,
+        rawQrCode,
         paymentLinkData: paymentLinkResponse
       }
     });

@@ -1167,7 +1167,13 @@ const OrderQueue = () => {
                         <div className="flex flex-col items-center space-y-3">
                             <div className="p-2.5 bg-white rounded-xl shadow-md border border-slate-200">
                                 <img
-                                    src={payosLinkData?.qrCode || `https://img.vietqr.io/image/${BANK_BIN}-${ACCOUNT_NUMBER}-compact2.png?amount=${qrVerifyingOrder.final_total}&addInfo=${encodeURIComponent(`Thanh Toan Don ${qrVerifyingOrder._id.slice(-6).toUpperCase()}`)}&accountName=${encodeURIComponent(ACCOUNT_NAME)}`}
+                                    src={
+                                        payosLinkData?.qrCode
+                                            ? (payosLinkData.qrCode.startsWith('http') || payosLinkData.qrCode.startsWith('data:')
+                                                ? payosLinkData.qrCode
+                                                : `https://api.qrserver.com/v1/create-qr-code/?size=350x350&data=${encodeURIComponent(payosLinkData.qrCode)}`)
+                                            : `https://img.vietqr.io/image/${BANK_BIN}-${ACCOUNT_NUMBER}-compact2.png?amount=${qrVerifyingOrder.final_total}&addInfo=${encodeURIComponent(`Thanh Toan Don ${qrVerifyingOrder._id.slice(-6).toUpperCase()}`)}&accountName=${encodeURIComponent(ACCOUNT_NAME)}`
+                                    }
                                     alt="VietQR / PayOS Payment Code"
                                     className="w-48 h-48 object-contain"
                                 />

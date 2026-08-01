@@ -403,7 +403,13 @@ const OrderMenu = () => {
             try {
                 const res = await API.post(`/orders/${orderId}/payos-link`);
                 if (res.data.success) {
-                    if (res.data.data?.qrCode) setQrUrl(res.data.data.qrCode);
+                    const rawQr = res.data.data?.qrCode;
+                    if (rawQr) {
+                        const formattedQr = (rawQr.startsWith('http') || rawQr.startsWith('data:'))
+                            ? rawQr
+                            : `https://api.qrserver.com/v1/create-qr-code/?size=350x350&data=${encodeURIComponent(rawQr)}`;
+                        setQrUrl(formattedQr);
+                    }
                     if (res.data.data?.checkoutUrl) setPayosCheckoutUrl(res.data.data.checkoutUrl);
                 }
             } catch (e) {
