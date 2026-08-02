@@ -100,17 +100,20 @@ const OrderQueue = () => {
 
     useEffect(() => {
         fetchQueueData();
-        const interval = setInterval(fetchQueueData, 4000); // Tự động làm mới mỗi 4 giây
+        const interval = setInterval(() => {
+            if (!document.hidden) {
+                fetchQueueData();
+            }
+        }, 5000); // Tự động làm mới mỗi 5 giây khi tab đang active
         return () => clearInterval(interval);
     }, [fetchQueueData]);
 
-    // ⚡ TỰ ĐỘNG ĐÓNG ĐƠN: Khi khách chuyển khoản VietQR thành công, hệ thống tự nhận diện & chốt đơn không cần nhấp chuột
+    // ⚡ TỰ ĐỘNG XÁC NHẬN CHUYỂN KHOẢN: Khi khách chuyển khoản VietQR thành công, đóng modal xác nhận QR (đơn giữ nguyên trong hàng đợi để Staff chốt)
     useEffect(() => {
         if (qrVerifyingOrder) {
             const found = allStoreOrders.find(o => o._id === qrVerifyingOrder._id) || orders.find(o => o._id === qrVerifyingOrder._id);
             if (found && found.payment_status === 'paid') {
-                toast.success(`🎉 TỰ ĐỘNG XÁC NHẬN: Đơn #${found._id.slice(-6).toUpperCase()} đã chuyển khoản thành công!`);
-                handleSettleOrder(found._id, 'payos');
+                toast.success(`🎉 TỰ ĐỘNG XÁC NHẬN: Đơn #${found._id.slice(-6).toUpperCase()} đã nhận tiền chuyển khoản thành công!`);
                 setQrVerifyingOrder(null);
                 setSettleModalOrder(null);
             }
@@ -306,6 +309,19 @@ const OrderQueue = () => {
             }
         } catch (err) {
             alert(err.response?.data?.message || "Lỗi khi báo hoàn thành bếp.");
+        }
+    };
+
+    const handleRevertServingOrder = async (orderId) => {
+        try {
+            const res = await API.post(`/orders/${orderId}/revert-serving`);
+            if (res.data.success) {
+                toast.success("Đã chuyển đơn quay lại cột Đang xử lý bếp!");
+                setOrders(prev => prev.map(o => o._id === orderId ? { ...o, status: 'serving' } : o));
+                fetchQueueData();
+            }
+        } catch (err) {
+            alert(err.response?.data?.message || "Lỗi khi trả đơn về bếp.");
         }
     };
 
@@ -730,6 +746,21 @@ const OrderQueue = () => {
                                     onClick={() => setSelectedOrder(order)}
                                     className="bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-750 border border-slate-200 dark:border-slate-700/60 hover:border-slate-300 dark:hover:border-slate-600 rounded-xl p-4 transition-all cursor-pointer shadow-sm relative group space-y-2"
                                 >
+                                    {/* ↩️ Nút Quay lại Bếp đặt ở TRÊN CÙNG của thẻ đơn hàng */}
+                                    <div className="flex justify-between items-center pb-2 border-b border-slate-100 dark:border-slate-700/50">
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleRevertServingOrder(order._id);
+                                            }}
+                                            className="px-2.5 py-1 bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/30 rounded-lg text-[10px] font-black transition-all cursor-pointer flex items-center gap-1 shadow-xs"
+                                            title="Trả đơn về lại cột Đang xử lý bếp"
+                                        >
+                                            <span>↩️ Quay lại Bếp</span>
+                                        </button>
+                                        <span className="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Báo bếp chế biến lại</span>
+                                    </div>
+
                                     <div className="flex justify-between items-start">
                                         <div>
                                             <span className="text-xs font-black text-purple-600 dark:text-purple-400">#{order._id.slice(-6).toUpperCase()}</span>

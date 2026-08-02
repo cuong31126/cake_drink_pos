@@ -374,16 +374,8 @@ const getOrderById = async (req, res, next) => {
 
         if (payosData && (payosData.status === 'PAID' || payosData.amountPaid >= order.final_total)) {
           order.payment_status = 'paid';
-          order.status = 'completed';
           order.payment_method = 'payos';
           await order.save();
-
-          if (order.table_id) {
-            await Table.findByIdAndUpdate(order.table_id, {
-              status: 'available',
-              current_order_id: null
-            });
-          }
         }
       } catch (checkErr) {
         // Ignored if order is not paid yet on PayOS
@@ -828,6 +820,34 @@ const updateOrderNoteAndFlag = async (req, res, next) => {
   }
 };
 
+const revertServingOrder = async (req, res, next) => {
+  try {
+    const orderId = req.params.id;
+    const order = await Order.findById(orderId);
+    if (!order) {
+      res.status(404);
+      throw new Error('Không tìm thấy đơn hàng.');
+    }
+
+    order.status = 'serving';
+    if (order.items && order.items.length > 0) {
+      order.items.forEach(item => {
+        item.item_status = 'cooking';
+      });
+    }
+
+    const savedOrder = await order.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Đã chuyển đơn hàng quay lại cột Đang xử lý bếp.',
+      data: savedOrder
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = { 
   createDineInOrder,
   createTakeAwayOrder,
@@ -841,6 +861,7 @@ module.exports = {
   printDraftBill,
   acceptOrder,
   readyOrder,
+  revertServingOrder,
   confirmOrder,
   deleteOrder,
   createPayOSPaymentLink,

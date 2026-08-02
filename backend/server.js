@@ -23,9 +23,13 @@ const apiRoutes = require('./routes/api');
 app.use('/api/v1', apiRoutes); // Đầy đủ tiền tố chuẩn: /api/v1/auth/google
 app.use('/api', apiRoutes);    // Tiền tố ngắn: /api/auth/google
 
-// Định tuyến cơ bản kiểm tra trạng thái hoạt động của Server
-app.get('/', (req, res) => {
-  res.status(200).json({ status: 'active', message: 'Hệ thống POS Cake & Drink Backend đang chạy ổn định.' });
+// Định tuyến cơ bản kiểm tra trạng thái hoạt động & keep-alive cho Render
+app.get(['/', '/ping', '/health', '/api/v1/ping'], (req, res) => {
+  res.status(200).json({
+    status: 'active',
+    timestamp: new Date().toISOString(),
+    message: 'Hệ thống POS Cake & Drink Backend đang chạy ổn định.'
+  });
 });
 
 // Fallback tuyến đường gốc cho các request trực tiếp (như /auth/google)

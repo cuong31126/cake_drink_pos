@@ -62,7 +62,7 @@ const AdminDashboard = () => {
       setLoading(true);
       const [revRes, topRes, slowRes, stockRes] = await Promise.all([
         API.get(`/dashboard/revenue-stats?store_id=${overviewStoreFilter}`),
-        API.get(`/dashboard/top-selling?store_id=${overviewStoreFilter}`),
+        API.get(`/dashboard/top-selling?store_id=${overviewStoreFilter}`), // gọi api top selling 
         API.get(`/dashboard/slow-moving?store_id=${overviewStoreFilter}`),
         API.get(`/dashboard/low-stock?store_id=${overviewStoreFilter}`)
       ]);
@@ -177,7 +177,7 @@ const AdminDashboard = () => {
     setEditingStockItem(product);
     const targetStore = storeId || (inventoryStoreFilter !== 'all' ? inventoryStoreFilter : 'store_Q1');
     setEditingStockStore(targetStore);
-    
+
     let currentStockVal = 0;
     if (product.inventory && Array.isArray(product.inventory)) {
       const inv = product.inventory.find(i => i.store_id === targetStore);
@@ -426,7 +426,7 @@ const AdminDashboard = () => {
 
   return (
     <div className="min-h-screen transition-colors duration-300 bg-gray-50 dark:bg-slate-950 text-gray-800 dark:text-slate-100 pt-20 px-6 max-w-7xl mx-auto pb-16 font-sans">
-      
+
       {/* 👑 ADMIM HEADER & TABS NAVIGATION */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 pb-4 border-b border-gray-200 dark:border-slate-800">
         <div>
@@ -440,33 +440,29 @@ const AdminDashboard = () => {
         <div className="flex bg-gray-200 dark:bg-slate-800 p-1 rounded-2xl">
           <button
             onClick={() => setActiveTab('overview')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-              activeTab === 'overview' ? 'bg-white dark:bg-slate-900 text-gray-900 dark:text-slate-100 shadow-xs' : 'text-gray-600 dark:text-slate-400 hover:text-gray-900 dark:hover:text-slate-100'
-            }`}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${activeTab === 'overview' ? 'bg-white dark:bg-slate-900 text-gray-900 dark:text-slate-100 shadow-xs' : 'text-gray-600 dark:text-slate-400 hover:text-gray-900 dark:hover:text-slate-100'
+              }`}
           >
             📊 1. Báo Cáo Tài Chính
           </button>
           <button
             onClick={() => setActiveTab('products')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-              activeTab === 'products' ? 'bg-white dark:bg-slate-900 text-gray-900 dark:text-slate-100 shadow-xs' : 'text-gray-600 dark:text-slate-400 hover:text-gray-900 dark:hover:text-slate-100'
-            }`}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${activeTab === 'products' ? 'bg-white dark:bg-slate-900 text-gray-900 dark:text-slate-100 shadow-xs' : 'text-gray-600 dark:text-slate-400 hover:text-gray-900 dark:hover:text-slate-100'
+              }`}
           >
             🏷️ 2. Sửa Giá & Khuyến Mãi Món
           </button>
           <button
             onClick={() => setActiveTab('users')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-              activeTab === 'users' ? 'bg-white dark:bg-slate-900 text-gray-900 dark:text-slate-100 shadow-xs' : 'text-gray-600 dark:text-slate-400 hover:text-gray-900 dark:hover:text-slate-100'
-            }`}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${activeTab === 'users' ? 'bg-white dark:bg-slate-900 text-gray-900 dark:text-slate-100 shadow-xs' : 'text-gray-600 dark:text-slate-400 hover:text-gray-900 dark:hover:text-slate-100'
+              }`}
           >
             👥 3. Phân Quyền
           </button>
           <button
             onClick={() => setActiveTab('inventory')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-              activeTab === 'inventory' ? 'bg-white dark:bg-slate-900 text-gray-900 dark:text-slate-100 shadow-xs' : 'text-gray-600 dark:text-slate-400 hover:text-gray-900 dark:hover:text-slate-100'
-            }`}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${activeTab === 'inventory' ? 'bg-white dark:bg-slate-900 text-gray-900 dark:text-slate-100 shadow-xs' : 'text-gray-600 dark:text-slate-400 hover:text-gray-900 dark:hover:text-slate-100'
+              }`}
           >
             📦 4. Quản Lý Tồn Kho
           </button>
@@ -478,42 +474,39 @@ const AdminDashboard = () => {
          ======================================================== */}
       {activeTab === 'overview' && (
         <div className="space-y-8 animate-in fade-in duration-150">
-          
+
           {/* 🏢 BỘ LỌC CHI NHÁNH CỬA HÀNG */}
           <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-gray-200 dark:border-slate-800 shadow-2xs flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center space-x-2">
               <span className="text-sm font-black text-gray-800 dark:text-slate-100 uppercase tracking-wide">🏢 Lọc Doanh Thu Theo Chi Nhánh:</span>
               <span className="text-xs text-gray-400 dark:text-slate-400 font-medium">(Phân tích chi tiết từng cửa hàng)</span>
             </div>
-            
+
             <div className="flex gap-2">
               <button
                 onClick={() => setOverviewStoreFilter('all')}
-                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer border ${
-                  overviewStoreFilter === 'all'
+                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer border ${overviewStoreFilter === 'all'
                     ? 'bg-purple-600 text-white border-purple-600 shadow-xs'
                     : 'bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-slate-300 border-gray-200 dark:border-slate-700 hover:bg-gray-200'
-                }`}
+                  }`}
               >
                 🏢 Tất cả cửa hàng
               </button>
               <button
                 onClick={() => setOverviewStoreFilter('store_Q1')}
-                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer border ${
-                  overviewStoreFilter === 'store_Q1'
+                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer border ${overviewStoreFilter === 'store_Q1'
                     ? 'bg-purple-600 text-white border-purple-600 shadow-xs'
                     : 'bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-slate-300 border-gray-200 dark:border-slate-700 hover:bg-gray-200'
-                }`}
+                  }`}
               >
                 📍 Chi nhánh 1 (Quận 1)
               </button>
               <button
                 onClick={() => setOverviewStoreFilter('store_ThuDuc')}
-                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer border ${
-                  overviewStoreFilter === 'store_ThuDuc'
+                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer border ${overviewStoreFilter === 'store_ThuDuc'
                     ? 'bg-purple-600 text-white border-purple-600 shadow-xs'
                     : 'bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-slate-300 border-gray-200 dark:border-slate-700 hover:bg-gray-200'
-                }`}
+                  }`}
               >
                 📍 Chi nhánh 2 (Thủ Đức)
               </button>
@@ -529,7 +522,7 @@ const AdminDashboard = () => {
                 ↑ {overviewStoreFilter === 'all' ? 'Tổng 2 cửa hàng' : overviewStoreFilter === 'store_Q1' ? 'Doanh thu Chi nhánh 1 - Quận 1' : 'Doanh thu Chi nhánh 2 - Thủ Đức'}
               </div>
             </div>
-            
+
             <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-gray-200 dark:border-slate-800 shadow-2xs hover:shadow-md transition-shadow">
               <div className="text-xs font-bold text-gray-400 dark:text-slate-400 uppercase tracking-wider">Hóa Đơn Hoàn Thành</div>
               <div className="text-3xl font-black text-gray-800 dark:text-slate-100 mt-2">{revenueStats.totalOrders || 0} đơn</div>
@@ -692,9 +685,8 @@ const AdminDashboard = () => {
                         <div className="font-bold text-gray-800 dark:text-slate-200">{alert.name}</div>
                         <div className="text-[10px] text-gray-400 dark:text-slate-400 mt-0.5">Chi nhánh: <span className="uppercase text-blue-600 dark:text-blue-400">{alert.store_id}</span></div>
                       </div>
-                      <span className={`px-2 py-0.5 rounded text-[10px] uppercase font-bold ${
-                        alert.current_stock === 0 ? 'bg-red-200 dark:bg-red-900/80 text-red-800 dark:text-red-200 animate-pulse' : 'bg-amber-200 dark:bg-amber-900/80 text-amber-800 dark:text-amber-200'
-                      }`}>
+                      <span className={`px-2 py-0.5 rounded text-[10px] uppercase font-bold ${alert.current_stock === 0 ? 'bg-red-200 dark:bg-red-900/80 text-red-800 dark:text-red-200 animate-pulse' : 'bg-amber-200 dark:bg-amber-900/80 text-amber-800 dark:text-amber-200'
+                        }`}>
                         {alert.current_stock === 0 ? 'HẾT HÀNG' : `Còn: ${alert.current_stock}`}
                       </span>
                     </div>
@@ -749,7 +741,7 @@ const AdminDashboard = () => {
                   {product.is_on_sale && (
                     <div className="flex justify-between text-xs">
                       <span className="text-slate-500 dark:text-slate-400 font-bold">Giá sau giảm:</span>
-                      <span className="font-black text-red-600 dark:text-red-400">{product.sale_price ? product.sale_price.toLocaleString() : (product.price * (1 - product.discount_percent/100)).toLocaleString()} đ</span>
+                      <span className="font-black text-red-600 dark:text-red-400">{product.sale_price ? product.sale_price.toLocaleString() : (product.price * (1 - product.discount_percent / 100)).toLocaleString()} đ</span>
                     </div>
                   )}
                 </div>
@@ -824,10 +816,9 @@ const AdminDashboard = () => {
                       <td className="p-4 font-bold text-gray-900 dark:text-slate-100">{u.name || 'Chưa cập nhật tên'}</td>
                       <td className="p-4 font-mono text-gray-600 dark:text-slate-400">{u.email}</td>
                       <td className="p-4">
-                        <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase ${
-                          u.role === 'admin' ? 'bg-purple-100 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800' :
-                          u.role === 'staff' ? 'bg-blue-100 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800' : 'bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-slate-400'
-                        }`}>
+                        <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase ${u.role === 'admin' ? 'bg-purple-100 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800' :
+                            u.role === 'staff' ? 'bg-blue-100 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800' : 'bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-slate-400'
+                          }`}>
                           {u.role === 'admin' ? '👑 ADMIN' : u.role === 'staff' ? '👨‍🍳 STAFF' : '👤 USER'}
                         </span>
                       </td>
@@ -858,27 +849,24 @@ const AdminDashboard = () => {
                           <button
                             onClick={() => handleUpdateRoleSubmit(u._id, 'user', u.store_id || 'store_Q1')}
                             disabled={u.role === 'user'}
-                            className={`px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase transition-all cursor-pointer ${
-                              u.role === 'user' ? 'bg-gray-100 dark:bg-slate-800 text-gray-300 dark:text-slate-600 cursor-not-allowed' : 'bg-gray-200 dark:bg-slate-700 hover:bg-gray-300 dark:hover:bg-slate-600 text-gray-700 dark:text-slate-200'
-                            }`}
+                            className={`px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase transition-all cursor-pointer ${u.role === 'user' ? 'bg-gray-100 dark:bg-slate-800 text-gray-300 dark:text-slate-600 cursor-not-allowed' : 'bg-gray-200 dark:bg-slate-700 hover:bg-gray-300 dark:hover:bg-slate-600 text-gray-700 dark:text-slate-200'
+                              }`}
                           >
                             Hạ thành User
                           </button>
                           <button
                             onClick={() => handleUpdateRoleSubmit(u._id, 'staff', u.store_id || 'store_Q1')}
                             disabled={u.role === 'staff'}
-                            className={`px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase transition-all cursor-pointer ${
-                              u.role === 'staff' ? 'bg-blue-100 dark:bg-blue-950/60 text-blue-300 dark:text-blue-700 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700 text-white shadow-2xs'
-                            }`}
+                            className={`px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase transition-all cursor-pointer ${u.role === 'staff' ? 'bg-blue-100 dark:bg-blue-950/60 text-blue-300 dark:text-blue-700 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700 text-white shadow-2xs'
+                              }`}
                           >
                             ⚡ Nâng lên Staff
                           </button>
                           <button
                             onClick={() => handleUpdateRoleSubmit(u._id, 'admin', u.store_id || 'store_Q1')}
                             disabled={u.role === 'admin'}
-                            className={`px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase transition-all cursor-pointer ${
-                              u.role === 'admin' ? 'bg-purple-100 dark:bg-purple-950/60 text-purple-300 dark:text-purple-700 cursor-not-allowed' : 'bg-purple-600 hover:bg-purple-700 text-white shadow-2xs'
-                            }`}
+                            className={`px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase transition-all cursor-pointer ${u.role === 'admin' ? 'bg-purple-100 dark:bg-purple-950/60 text-purple-300 dark:text-purple-700 cursor-not-allowed' : 'bg-purple-600 hover:bg-purple-700 text-white shadow-2xs'
+                              }`}
                           >
                             👑 Nâng lên Admin
                           </button>
@@ -898,7 +886,7 @@ const AdminDashboard = () => {
          ======================================================== */}
       {activeTab === 'inventory' && (
         <div className="space-y-6 animate-in fade-in duration-150">
-          
+
           {/* 🎛️ KHU VỰC BỘ LỌC CHI NHÁNH & THỜI GIAN & CHỐT KHO */}
           <div className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-200 dark:border-slate-800 p-5 shadow-2xs flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
             <div>
@@ -997,7 +985,7 @@ const AdminDashboard = () => {
                 <h4 className="font-bold text-sm text-gray-800 dark:text-slate-100 uppercase tracking-wide">Danh Sách Sản Phẩm & Mức Kho Chi Nhánh</h4>
                 <p className="text-xs text-gray-400 dark:text-slate-400">Xem và cập nhật số lượng tồn kho từng món (Bảo mật bằng mã PIN 6 số cho Staff)</p>
               </div>
-              
+
               <div className="w-full md:w-64">
                 <input
                   type="text"
@@ -1101,10 +1089,9 @@ const AdminDashboard = () => {
                         </td>
                         <td className="p-3 font-bold uppercase text-amber-600 dark:text-amber-400">{log.store_id}</td>
                         <td className="p-3">
-                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
-                            log.type === 'start_of_day' ? 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300' :
-                            log.type === 'end_of_day' ? 'bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300' : 'bg-gray-100 text-gray-700 dark:bg-slate-800 dark:text-slate-300'
-                          }`}>
+                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${log.type === 'start_of_day' ? 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300' :
+                              log.type === 'end_of_day' ? 'bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300' : 'bg-gray-100 text-gray-700 dark:bg-slate-800 dark:text-slate-300'
+                            }`}>
                             {log.type === 'start_of_day' ? '🌅 Đầu ngày' : log.type === 'end_of_day' ? '🌙 Cuối ngày' : '✏️ Điều chỉnh'}
                           </span>
                         </td>
@@ -1263,18 +1250,16 @@ const AdminDashboard = () => {
                   <button
                     type="button"
                     onClick={() => setDailyStockType('start_of_day')}
-                    className={`py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                      dailyStockType === 'start_of_day' ? 'bg-blue-600 text-white shadow-2xs' : 'bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-slate-400'
-                    }`}
+                    className={`py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${dailyStockType === 'start_of_day' ? 'bg-blue-600 text-white shadow-2xs' : 'bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-slate-400'
+                      }`}
                   >
                     🌅 Chốt Kho Đầu Ngày
                   </button>
                   <button
                     type="button"
                     onClick={() => setDailyStockType('end_of_day')}
-                    className={`py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                      dailyStockType === 'end_of_day' ? 'bg-purple-600 text-white shadow-2xs' : 'bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-slate-400'
-                    }`}
+                    className={`py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${dailyStockType === 'end_of_day' ? 'bg-purple-600 text-white shadow-2xs' : 'bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-slate-400'
+                      }`}
                   >
                     🌙 Chốt Kho Cuối Ngày
                   </button>
@@ -1478,7 +1463,7 @@ const AdminDashboard = () => {
                 <div className="text-xs font-bold text-emerald-800 dark:text-emerald-300 uppercase tracking-wide border-b border-emerald-200 dark:border-emerald-900/40 pb-2">
                   📍 Trạng Thái Từng Chi Nhánh
                 </div>
-                
+
                 <div className="flex items-center justify-between">
                   <div className="text-sm font-bold text-emerald-900 dark:text-emerald-200">Chi nhánh 1 (Quận 1)</div>
                   <button

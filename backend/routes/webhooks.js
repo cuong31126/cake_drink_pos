@@ -84,20 +84,12 @@ const handlePayOSWebhook = async (req, res, next) => {
       });
 
       if (matchedOrder && matchedOrder.payment_status !== 'paid') {
-        // Cập nhật hóa đơn thành Đã thanh toán và Hoàn thành
+        // Cập nhật hóa đơn thành Đã thanh toán (giữ nguyên status để Staff xác nhận & chế biến trên OrderQueue)
         matchedOrder.payment_status = 'paid';
-        matchedOrder.status = 'completed';
+        matchedOrder.payment_method = 'payos';
         await matchedOrder.save();
 
-        // Giải phóng bàn ăn nếu là đơn tại bàn
-        if (matchedOrder.table_id) {
-          await Table.findByIdAndUpdate(matchedOrder.table_id, {
-            status: 'available',      // Đổi sang màu xanh trống
-            current_order_id: null    // Ngắt liên kết đơn hàng cũ
-          });
-        }
-
-        console.log(`[Webhook PayOS Success] Đơn hàng #${matchedOrder._id.slice(-6).toUpperCase()} đã tự động chốt thanh toán và giải phóng bàn.`);
+        console.log(`[Webhook PayOS Success] Đơn hàng #${matchedOrder._id.slice(-6).toUpperCase()} đã ghi nhận thanh toán thành công (payment_status = paid).`);
       }
     }
 

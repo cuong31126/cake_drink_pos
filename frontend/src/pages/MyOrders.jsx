@@ -55,6 +55,7 @@ const MyOrders = () => {
 
     if (showBillModal && selectedOrder && selectedOrder.payment_status !== 'paid') {
       const checkPaymentStatus = async () => {
+        if (document.hidden) return;
         pollCount += 1;
         if (pollCount > MAX_POLLS) {
           clearInterval(intervalId);
@@ -81,6 +82,37 @@ const MyOrders = () => {
     if (e) e.stopPropagation();
     setSelectedOrder(order);
     setShowBillModal(true);
+  };
+
+  const handleCancelOrder = async (order, e) => {
+    if (e) e.stopPropagation();
+
+    const orderId = order._id;
+    const isPaid = order.payment_status === 'paid';
+
+    const confirmMsg = isPaid
+      ? `⚠️ Đơn hàng #${orderId.slice(-6).toUpperCase()} ĐÃ THANH TOÁN.\n\nBạn có chắc chắn muốn hủy đơn không? (Vui lòng báo Nhân viên quầy để hỗ trợ hoàn tiền!)`
+      : `Bạn có chắc chắn muốn hủy đơn hàng #${orderId.slice(-6).toUpperCase()} không?`;
+
+    const confirmCancel = window.confirm(confirmMsg);
+    if (!confirmCancel) return;
+
+    try {
+      const res = await API.post(`/orders/${orderId}/cancel`, {
+        reason: "Khách hàng tự hủy đơn khi chờ bếp nhận"
+      });
+
+      if (res.data.success) {
+        toast.success("✅ Đã hủy đơn hàng thành công!");
+        if (selectedOrder?._id === orderId) {
+          setShowBillModal(false);
+          setSelectedOrder(null);
+        }
+        fetchMyOrders();
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Lỗi khi hủy đơn hàng.");
+    }
   };
 
   const getStatusBadge = (status) => {
@@ -218,6 +250,16 @@ const MyOrders = () => {
                   </div>
 
                   <div className="flex space-x-2">
+                    {/* ❌ Nút Hủy đơn dành riêng cho trạng thái Chờ bếp nhận đơn */}
+                    {order.status === 'pending_confirm' && (
+                      <button
+                        onClick={(e) => handleCancelOrder(order, e)}
+                        className="px-3.5 py-1.5 bg-red-100 hover:bg-red-200 dark:bg-red-950/60 dark:hover:bg-red-900/60 text-red-700 dark:text-red-300 font-bold text-xs rounded-xl shadow-xs transition-all cursor-pointer flex items-center space-x-1 border border-red-200 dark:border-red-800"
+                      >
+                        <span>🚫 Hủy đơn</span>
+                      </button>
+                    )}
+
                     {(order.status === 'completed' || order.payment_status === 'paid') && (
                       <button
                         onClick={(e) => handleOpenBillModal(order, e)}
@@ -403,10 +445,18 @@ const MyOrders = () => {
             </div>
 
             {/* Footer Modal */}
-            <div className="p-4 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-850 flex justify-end">
+            <div className="p-4 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-850 flex gap-2 justify-end">
+              {selectedOrder.status === 'pending_confirm' && (
+                <button
+                  onClick={(e) => handleCancelOrder(selectedOrder, e)}
+                  className="w-1/2 py-2.5 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl text-xs transition-colors cursor-pointer flex items-center justify-center gap-1"
+                >
+                  <span>🚫 Hủy đơn này</span>
+                </button>
+              )}
               <button
                 onClick={() => setShowBillModal(false)}
-                className="w-full py-2.5 bg-slate-700 hover:bg-slate-800 text-white font-bold rounded-xl text-xs transition-colors cursor-pointer"
+                className={`${selectedOrder.status === 'pending_confirm' ? 'w-1/2' : 'w-full'} py-2.5 bg-slate-700 hover:bg-slate-800 text-white font-bold rounded-xl text-xs transition-colors cursor-pointer`}
               >
                 Đóng cửa sổ Hóa Đơn
               </button>

@@ -14,7 +14,9 @@ const connectDB = async () => {
     }
 
     const conn = await mongoose.connect(connURI, {
-      autoIndex: true, // Tự động xây dựng index (hữu ích cho thuộc tính unique như email)
+      autoIndex: process.env.NODE_ENV !== 'production',
+      maxPoolSize: 10,
+      serverSelectionTimeoutMS: 5000,
     });
 
     console.log(`[Database] Kết nối thành công tới MongoDB Atlas: ${conn.connection.host}`);

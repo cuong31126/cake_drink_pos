@@ -169,7 +169,11 @@ const ChatDashboard = () => {
     let interval;
     // Đồng bộ thời gian thực mỗi 3 giây đối với tin nhắn người thật
     if (activeRoomId && activeRoomId !== aiRoomId) {
-      interval = setInterval(fetchMessages, 3000);
+      interval = setInterval(() => {
+        if (!document.hidden) {
+          fetchMessages();
+        }
+      }, 4000);
     }
 
     return () => clearInterval(interval);

@@ -726,64 +726,80 @@ db.products.insertMany([
 ]);
 ```
 
-**BẢNG ĐẶC TẢ CHI TIẾT 42 API ENDPOINTS (CHUẨN EXCEL)**
+**BẢNG ĐẶC TẢ CHI TIẾT DỊCH VỤ RESTFUL API (ĐẦY ĐỦ 70 ENDPOINTS CHUẨN DỰ ÁN)**
 
-| **STT** | **Module** | **HTTP Method** | **API Endpoint Route** | **HTTP Status OK** | **HTTP Status Lỗi** | **Chức năng ngắn gọn** |
+| **STT** | **Module** | **HTTP Method** | **API Endpoint Route** | **HTTP Status OK** | **HTTP Status Lỗi** | **Chức năng chi tiết** |
 | --- | --- | --- | --- | --- | --- | --- |
-| **1** | **Auth** | `POST` | `/api/v1/auth/register` | `21` Created | `400` Bad Request | Khách hàng tự đăng ký tài khoản mới |
-| **2** | **Auth** | `POST` | `/api/v1/auth/login` | `200` OK | `401` Unauthorized | Đăng nhập hệ thống (Cấp Access & Refresh Token) |
-| **3** | **Auth** | `POST` | `/api/v1/auth/google` | `200` OK | `400` Bad Request | Đăng nhập/Đăng ký nhanh bằng Google OAuth2 |
-| **4** | **Auth** | `POST` | `/api/v1/auth/refresh-token` | `200` OK | `401` Unauthorized | Tự động cấp Access Token mới từ Refresh Token |
-| **5** | **Auth** | `POST` | `/api/v1/auth/logout` | `200` OK | `401` Unauthorized | Đăng xuất, vô hiệu hóa Token |
-| **6** | **Auth** | `GET` | `/api/v1/users/profile` | `200` OK | `401` Unauthorized | Xem thông tin cá nhân của User hiện tại |
-| **7** | **Store** | `GET` | `/api/v1/stores` | `200` OK | `500` Server Error | Xem danh sách tất cả chi nhánh trong chuỗi |
-| **8** | **Store** | `POST` | `/api/v1/stores` | `21` Created | `400`, `403` Forbidden | Admin thêm chi nhánh mới |
-| **9** | **Store** | `PUT` | `/api/v1/stores/:id` | `200` OK | `404` Not Found | Admin sửa thông tin chi nhánh |
-| **10** | **Table** | `GET` | `/api/v1/stores/:store_id/tables` | `200` OK | `404` Not Found | Lấy sơ đồ danh sách bàn của một chi nhánh cụ thể |
-| **11** | **Table** | `POST` | `/api/v1/tables` | `21` Created | `400`, `403` Forbidden | Admin thêm bàn mới vào sơ đồ quán |
-| **12** | **Table** | `PATCH` | `/api/v1/tables/:id/status` | `200` OK | `404` Not Found | Đổi trạng thái bàn (Ví dụ: Chuyển thủ công sang Trống) |
-| **13** | **Product** | `GET` | `/api/v1/products` | `200` OK | `500` Server Error | Khách/Staff xem menu (Ưu tiên đọc từ Redis Cache) |
-| **14** | **Product** | `GET` | `/api/v1/products/:id` | `200` OK | `404` Not Found | Xem chi tiết thuộc tính, size, đường, đá của 1 món |
-| **15** | **Product** | `POST` | `/api/v1/products` | `21` Created | `400`, `403` Forbidden | Admin thêm món mới vào Menu (Xóa Redis Cache cũ) |
-| **16** | **Product** | `PUT` | `/api/v1/products/:id` | `200` OK | `404` Not Found | Admin cập nhật thông tin món (Xóa Redis Cache cũ) |
-| **17** | **Product** | `DELETE` | `/api/v1/products/:id` | `200` OK | `404` Not Found | Admin xóa món (Chuyển trạng thái ngừng bán) |
-| **18** | **Product** | `PATCH` | `/api/v1/products/:id/stock` | `200` OK | `400`, `404` Not Found | Admin/Staff cập nhật số lượng kho riêng của chi nhánh |
-| **19** | **Product** | `GET` | `/api/v1/categories` | `200` OK | `500` Server Error | Lấy danh sách các danh mục (Bánh mì, Donut, Trà...) |
-| **20** | **Product** | `POST` | `/api/v1/categories` | `21` Created | `400` Bad Request | Admin thêm danh mục mới |
-| **21** | **Order** | `POST` | `/api/v1/orders/dine-in` | `21` Created | `400` (Bàn đã có khách) | Nhân viên mở bàn, tạo đơn nháp (Bàn -> `occupied`) |
-| **22** | **Order** | `GET` | `/api/v1/orders/:id` | `200` OK | `404` Not Found | Xem chi tiết các món đã gọi và số tiền hiện tại của đơn |
-| **23** | **Order** | `PATCH` | `/api/v1/orders/:id/add-items` | `200` OK | `400` (Đơn đã chốt) | Khách gọi thêm món mới, Backend push vào đơn đang ăn |
-| **24** | **Order** | `PUT` | `/api/v1/orders/:id/edit-items` | `200` OK | `400` (Hủy món sai quy chế) | Nhân viên đổi món/sửa số lượng món khi khách yêu cầu |
-| **25** | **Order** | `PATCH` | `/api/v1/orders/:id/item-status` | `200` OK | `404` Not Found | Bếp cập nhật trạng thái món (`cooking` -> `served`) |
-| **26** | **Order** | `POST` | `/api/v1/orders/:id/apply-coupon` | `200` OK | `400` (Mã hết hạn/đã dùng) | Áp mã giảm giá vào đơn hàng, tính lại tiền `final_total` |
-| **27** | **Order** | `POST` | `/api/v1/orders/:id/settle` | `200` OK | `400` (Thanh toán lỗi) | Bấm thanh toán, chốt bill, tự động giải phóng bàn trống |
-| **28** | **Order** | `POST` | `/api/v1/orders/webhook-payos` | `200` OK | `400` Bad Request | Nhận tín hiệu thanh toán tự động qua mã QR ngân hàng |
-| **29** | **Order** | `POST` | `/api/v1/orders/:id/cancel` | `200` OK | `400` (Đã làm xong, cấm hủy) | Hủy toàn bộ hóa đơn (Xóa liên kết bàn, hoàn kho) |
-| **48** | **Order** | `GET` | `/api/v1/orders/:id/print-draft` | `200` OK | `404` Not Found | Lấy dữ liệu định dạng HTML/JSON để render Popup in hóa đơn tạm tính |
-| **31** | **Shift** | `POST` | `/api/v1/shifts/open` | `21` Created | `400` (Ca trước chưa đóng) | Nhân viên part-time vào ca, nhập tiền thối đầu ca |
-| **32** | **Shift** | `POST` | `/api/v1/shifts/close` | `200` OK | `404` Not Found | Kết thúc ca, nhập tiền thực tế, hệ thống tính chênh lệch |
-| **33** | **Shift** | `GET` | `/api/v1/shifts/current` | `200` OK | `404` Not Found | Kiểm tra thông tin ca trực hiện tại của nhân viên |
-| **43** | **Shift** | `GET` | `/api/v1/shifts/sync-cash` | `200` OK | `401` Unauthorized | Nhân viên bấm ở Topbar để xem số tiền mặt thực tế đã thu trong ca |
-| **35** | **Coupon** | `GET` | `/api/v1/coupons` | `200` OK | `500` Server Error | Xem danh sách toàn bộ mã giảm giá trên hệ thống |
-| **36** | **Coupon** | `POST` | `/api/v1/coupons` | `21` Created | `400` Bad Request | Admin tạo mã giảm giá mới kèm điều kiện ràng buộc |
-| **37** | **Coupon** | `PUT` | `/api/v1/coupons/:id` | `200` OK | `404` Not Found | Admin chỉnh sửa điều kiện hoặc hạn dùng của mã |
-| **38** | **Coupon** | `DELETE` | `/api/v1/coupons/:id` | `200` OK | `404` Not Found | Tắt kích hoạt hoặc xóa mã giảm giá |
-| **39** | **Chat** | `POST` | `/api/v1/chats/rooms` | `21` Created | `401` Unauthorized | Khách hàng bấm nút chat, khởi tạo phòng tư vấn mới |
-| **40** | **Chat** | `GET` | `/api/v1/chats/rooms` | `200` OK | `403` Forbidden | Nhân viên xem danh sách các phòng chat đang đợi trả lời |
-| **41** | **Chat** | `GET` | `/api/v1/chats/rooms/:id/messages` | `200` OK | `404` Not Found | Lấy lịch sử tin nhắn qua lại trong phòng chat |
-| **42** | **AI** | `POST` | `/api/v1/ai/generate-description` | `200` OK | `500` (Lỗi API AI bên thứ 3) | Gọi Gemini API tự động viết mô tả sản phẩm cho Admin |
-| **44** | **Admin Dashboard** | `GET` | `/api/v1/dashboard/revenue-stats` | `200` OK | `403` Forbidden | Admin xem biểu đồ tổng doanh thu theo ngày/tháng/năm |
-| **45** | **Admin Dashboard** | `GET` | `/api/v1/dashboard/top-selling` | `200` OK | `403` Forbidden | AI/Hệ thống thống kê top 5 món bán chạy nhất để nhập thêm nguyên liệu |
-| **46** | **Admin Dashboard** | `GET` | `/api/v1/dashboard/slow-moving` | `200` OK | `403` Forbidden | Thống kê các món bán chậm nhất để chạy chương trình khuyến mãi |
-| **47** | **Admin Dashboard** | `GET` | `/api/v1/dashboard/low-stock` | `200` OK | `403` Forbidden | Cảnh báo danh sách các món/chi nhánh có tồn kho sắp chạm mức 0 |
-
-| **STT** | **Module** | **HTTP Method** | **API Endpoint Route** | **HTTP Status OK** | **HTTP Status Lỗi** | **Chức năng ngắn gọn (Bổ sung mới)** |
-| --- | --- | --- | --- | --- | --- | --- |
-| **49** | **Order** | `POST` | `/api/v1/orders/take-away` | `201` Created | `400` Bad Request | Khởi tạo đơn hàng mang đi nháp mới cho khách hàng/nhân viên |
-| **50** | **Order** | `POST` | `/api/v1/orders/:id/accept` | `200` OK | `404` Not Found | Nhân viên nhận đơn hàng chờ xác nhận, đưa vào bếp (pending_confirm -> serving) |
-| **51** | **Order** | `POST` | `/api/v1/orders/:id/ready` | `200` OK | `404` Not Found | Bếp báo đã làm xong đồ ăn/nước uống (serving -> ready) |
-| **52** | **Order** | `POST` | `/api/v1/orders/:id/confirm` | `200` OK | `404` Not Found | Cập nhật cờ xác nhận giỏ hàng is_confirmed (true/false) của khách |
-| **53** | **Product** | `PATCH` | `/api/v1/products/:id/toggle-status` | `200` OK | `404` Not Found | Bật/tắt trạng thái còn món/hết món (selling vs out_of_stock) của sản phẩm |
+| **1** | **Auth** | `POST` | `/api/v1/auth/register` | `201` Created | `400` Bad Request | Khách hàng tự đăng ký tài khoản mới |
+| **2** | **Auth** | `POST` | `/api/v1/auth/login` | `200` OK | `401` Unauthorized | Đăng nhập hệ thống (Cấp Access Token & Refresh Token) |
+| **3** | **Auth** | `POST` | `/api/v1/auth/google` | `200` OK | `400` Bad Request | Đăng nhập / Đăng ký nhanh bằng Google OAuth2 |
+| **4** | **Auth** | `POST` | `/api/v1/auth/refresh-token` | `200` OK | `401` Unauthorized | Tự động làm mới Access Token từ Refresh Token |
+| **5** | **Auth** | `POST` | `/api/v1/auth/logout` | `200` OK | `401` Unauthorized | Đăng xuất người dùng, vô hiệu hóa Token |
+| **6** | **Auth** | `POST` | `/api/v1/auth/verify-pin` | `200` OK | `400` Bad Request | Xác thực mã PIN Quản lý/Admin khi sửa/hủy món |
+| **7** | **Auth** | `GET` | `/api/v1/users/profile` | `200` OK | `401` Unauthorized | Xem thông tin hồ sơ cá nhân của người dùng hiện tại |
+| **8** | **Auth** | `GET` | `/api/v1/users` | `200` OK | `403` Forbidden | Admin xem danh sách tất cả tài khoản người dùng |
+| **9** | **Auth** | `PATCH` | `/api/v1/users/:id/role` | `200` OK | `403` Forbidden | Admin phân quyền tài khoản (admin, staff, user) |
+| **10** | **Store** | `GET` | `/api/v1/stores` | `200` OK | `500` Server Error | Xem danh sách toàn bộ các chi nhánh cửa hàng |
+| **11** | **Store** | `POST` | `/api/v1/stores` | `201` Created | `400`, `403` Forbidden | Admin khởi tạo chi nhánh cửa hàng mới |
+| **12** | **Store** | `PUT` | `/api/v1/stores/:id` | `200` OK | `404` Not Found | Admin cập nhật thông tin chi nhánh cửa hàng |
+| **13** | **Table** | `GET` | `/api/v1/stores/:store_id/tables` | `200` OK | `404` Not Found | Lấy sơ đồ phòng bàn của chi nhánh cụ thể |
+| **14** | **Table** | `POST` | `/api/v1/tables` | `201` Created | `400`, `403` Forbidden | Admin thêm bàn mới vào sơ đồ chi nhánh |
+| **15** | **Table** | `PATCH` | `/api/v1/tables/:id/status` | `200` OK | `404` Not Found | Cập nhật trạng thái bàn thủ công (`available` / `occupied`) |
+| **16** | **Product** | `GET` | `/api/v1/products` | `200` OK | `500` Server Error | Xem thực đơn món ăn & đồ uống theo chi nhánh |
+| **17** | **Product** | `GET` | `/api/v1/products/:id` | `200` OK | `404` Not Found | Xem chi tiết thuộc tính món (size, đường, đá...) |
+| **18** | **Product** | `POST` | `/api/v1/products` | `201` Created | `400`, `403` Forbidden | Admin thêm sản phẩm mới vào Menu |
+| **19** | **Product** | `PUT` | `/api/v1/products/:id` | `200` OK | `404` Not Found | Admin chỉnh sửa thông tin chi tiết sản phẩm |
+| **20** | **Product** | `DELETE` | `/api/v1/products/:id` | `200` OK | `404` Not Found | Admin xóa sản phẩm khỏi Menu |
+| **21** | **Product** | `PATCH` | `/api/v1/products/:id/stock` | `200` OK | `400`, `404` Not Found | Admin/Staff cập nhật số lượng tồn kho theo chi nhánh |
+| **22** | **Product** | `PATCH` | `/api/v1/products/:id/toggle-status` | `200` OK | `404` Not Found | Bật/tắt trạng thái kinh doanh (`selling` / `out_of_stock`) |
+| **23** | **Product** | `GET` | `/api/v1/categories` | `200` OK | `500` Server Error | Lấy danh sách danh mục (Bánh mì, Donut, Cà phê, Trà...) |
+| **24** | **Product** | `POST` | `/api/v1/categories` | `201` Created | `400` Bad Request | Admin thêm danh mục sản phẩm mới |
+| **25** | **Inventory** | `GET` | `/api/v1/inventory/summary` | `200` OK | `403` Forbidden | Xem tổng quan báo cáo xuất nhập tồn kho chi nhánh |
+| **26** | **Inventory** | `POST` | `/api/v1/inventory/log` | `201` Created | `400` Bad Request | Ghi nhật ký nhập kho / xuất kho / điều chỉnh tồn |
+| **27** | **Order** | `GET` | `/api/v1/orders` | `200` OK | `500` Server Error | Lấy danh sách đơn hàng có lọc theo vai trò & chi nhánh |
+| **28** | **Order** | `POST` | `/api/v1/orders/dine-in` | `201` Created | `400` Bad Request | Mở bàn ăn tại quán & tạo đơn hàng nháp (`occupied`) |
+| **29** | **Order** | `POST` | `/api/v1/orders/take-away` | `201` Created | `400` Bad Request | Tạo đơn hàng mang đi / giao hàng tận nơi mới |
+| **30** | **Order** | `GET` | `/api/v1/orders/:id` | `200` OK | `404` Not Found | Truy vấn thông tin chi tiết đơn hàng & trạng thái PayOS |
+| **31** | **Order** | `PATCH` | `/api/v1/orders/:id/add-items` | `200` OK | `400` Bad Request | Khách/Staff gọi thêm món mới, ghép vào đơn đang phục vụ |
+| **32** | **Order** | `PUT` | `/api/v1/orders/:id/edit-items` | `200` OK | `400` Bad Request | Đổi món/sửa số lượng món kèm lưu vết `cancelled_items` |
+| **33** | **Order** | `PATCH` | `/api/v1/orders/:id/item-status` | `200` OK | `404` Not Found | Bếp cập nhật trạng thái chế biến món (`cooking` / `served`) |
+| **34** | **Order** | `POST` | `/api/v1/orders/:id/apply-coupon` | `200` OK | `400` Bad Request | Áp mã giảm giá vào đơn hàng, tính lại `final_total` |
+| **35** | **Order** | `POST` | `/api/v1/orders/:id/settle` | `200` OK | `400` Bad Request | Chốt hóa đơn thanh toán thành công & giải phóng bàn |
+| **36** | **Order** | `POST` | `/api/v1/orders/:id/cancel` | `200` OK | `400` Bad Request | Hủy đơn hàng (Giải phóng bàn, hoàn trả lại tồn kho) |
+| **37** | **Order** | `GET` | `/api/v1/orders/:id/print-draft` | `200` OK | `404` Not Found | Lấy dữ liệu mẫu để in phiếu thanh toán tạm tính |
+| **38** | **Order** | `POST` | `/api/v1/orders/:id/accept` | `200` OK | `404` Not Found | Staff tiếp nhận đơn hàng mới (`pending_confirm` -> `serving`) |
+| **39** | **Order** | `POST` | `/api/v1/orders/:id/ready` | `200` OK | `404` Not Found | Bếp báo đã làm xong tất cả món (`serving` -> `ready`) |
+| **40** | **Order** | `POST` | `/api/v1/orders/:id/revert-serving` | `200` OK | `404` Not Found | Staff chuyển đơn từ Chờ trả quay lại Bếp (`ready` -> `serving`) |
+| **41** | **Order** | `POST` | `/api/v1/orders/:id/confirm` | `200` OK | `404` Not Found | Cập nhật cờ xác nhận giỏ hàng `is_confirmed` |
+| **42** | **Order** | `POST` | `/api/v1/orders/:id/payos-link` | `200` OK | `400` Bad Request | Tạo SDK Payment Link & Mã VietQR thanh toán PayOS |
+| **43** | **Order** | `PATCH` | `/api/v1/orders/:id/flag` | `200` OK | `404` Not Found | Cập nhật ghi chú & đánh cờ cảnh báo nghi vấn đơn hàng |
+| **44** | **Order** | `DELETE` | `/api/v1/orders/:id` | `200` OK | `404` Not Found | Admin xóa vĩnh viễn bản ghi đơn hàng khỏi Database |
+| **45** | **Webhook** | `GET` | `/api/webhooks/payos` | `200` OK | `500` Server Error | PayOS Dashboard gửi request kiểm tra endpoint tồn tại |
+| **46** | **Webhook** | `POST` | `/api/webhooks/payos` | `200` OK | `400` Bad Request | Nhận tín hiệu Webhook tự động nhận biết tiền về từ PayOS |
+| **47** | **Shift** | `POST` | `/api/v1/shifts/open` | `21` Created | `400` Bad Request | Nhân viên mở ca mới & khai báo tiền thối két đầu ca |
+| **48** | **Shift** | `POST` | `/api/v1/shifts/close` | `200` OK | `404` Not Found | Chốt kết ca, đếm tiền két thực tế & tính chênh lệch |
+| **49** | **Shift** | `POST` | `/api/v1/shifts/handover` | `200` OK | `400` Bad Request | Bàn giao ca tự động: Đóng ca cũ và mở ca mới ngay lập tức |
+| **50** | **Shift** | `GET` | `/api/v1/shifts/current` | `200` OK | `404` Not Found | Lấy thông tin chi tiết ca làm việc đang diễn ra |
+| **51** | **Shift** | `GET` | `/api/v1/shifts/history` | `200` OK | `403` Forbidden | Truy vấn lịch sử danh sách toàn bộ các ca làm việc |
+| **52** | **Shift** | `GET` | `/api/v1/shifts/sync-cash` | `200` OK | `401` Unauthorized | Đồng bộ và xem tổng tiền mặt & chuyển khoản trong ca |
+| **53** | **Coupon** | `GET` | `/api/v1/coupons` | `200` OK | `500` Server Error | Lấy danh sách tất cả các mã giảm giá hiện có |
+| **54** | **Coupon** | `POST` | `/api/v1/coupons` | `21` Created | `400` Bad Request | Admin khởi tạo mã giảm giá mới kèm điều kiện |
+| **55** | **Coupon** | `PUT` | `/api/v1/coupons/:id` | `200` OK | `404` Not Found | Admin cập nhật điều kiện, số lượng hoặc hạn dùng mã |
+| **56** | **Coupon** | `DELETE` | `/api/v1/coupons/:id` | `200` OK | `404` Not Found | Admin vô hiệu hóa hoặc xóa mã giảm giá |
+| **57** | **Chat** | `POST` | `/api/v1/chats/rooms` | `21` Created | `401` Unauthorized | Khởi tạo phòng tư vấn trực tuyến (Live Chat) mới |
+| **58** | **Chat** | `GET` | `/api/v1/chats/rooms` | `200` OK | `403` Forbidden | Lấy danh sách các phòng tư vấn trực tuyến đang chờ |
+| **59** | **Chat** | `GET` | `/api/v1/chats/rooms/:id/messages` | `200` OK | `404` Not Found | Tải lịch sử trao đổi tin nhắn trong phòng chat |
+| **60** | **Chat** | `POST` | `/api/v1/chats/rooms/:id/messages` | `200` OK | `400` Bad Request | Gửi tin nhắn mới vào phòng chat |
+| **61** | **Admin Dashboard** | `GET` | `/api/v1/dashboard/revenue-stats` | `200` OK | `403` Forbidden | Admin xem thống kê doanh thu theo mốc thời gian |
+| **62** | **Admin Dashboard** | `GET` | `/api/v1/dashboard/top-selling` | `200` OK | `403` Forbidden | Thống kê danh sách top 5 món bán chạy nhất |
+| **63** | **Admin Dashboard** | `GET` | `/api/v1/dashboard/slow-moving` | `200` OK | `403` Forbidden | Thống kê danh sách các món bán chậm nhất |
+| **64** | **Admin Dashboard** | `GET` | `/api/v1/dashboard/low-stock` | `200` OK | `403` Forbidden | Thống kê cảnh báo các món có số lượng kho sắp hết |
+| **65** | **AI Assistant** | `POST` | `/api/v1/ai/chat-assistant` | `200` OK | `500` Server Error | Trợ lý AI Gemini trả lời tư vấn menu & nghiệp vụ |
+| **66** | **Notification** | `GET` | `/api/v1/notifications` | `200` OK | `401` Unauthorized | Lấy danh sách thông báo gửi cho người dùng |
+| **67** | **Notification** | `POST` | `/api/v1/notifications` | `21` Created | `403` Forbidden | Admin phát thông báo hệ thống mới |
+| **68** | **Notification** | `PATCH` | `/api/v1/notifications/:id/read` | `200` OK | `404` Not Found | Đánh dấu đã đọc một thông báo cụ thể |
+| **69** | **Notification** | `PATCH` | `/api/v1/notifications/read-all` | `200` OK | `401` Unauthorized | Đánh dấu đã đọc toàn bộ danh sách thông báo |
+| **70** | **System Keep-Alive** | `GET` | `/ping` hoặc `/health` | `200` OK | `500` Server Error | Kiểm tra tình trạng máy chủ & Giữ Render luôn tỉnh táo 24/7 |
 
 ## Cách 1: Sử dụng tài khoản Cá nhân thật của bạn kết hợp với PayOS (Khuyên dùng)
 

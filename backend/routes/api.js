@@ -59,6 +59,7 @@ const {
   printDraftBill,
   acceptOrder,
   readyOrder,
+  revertServingOrder,
   confirmOrder,
   deleteOrder,
   createPayOSPaymentLink,
@@ -168,6 +169,7 @@ router.post('/orders/:id/cancel', protect, authorize('admin', 'staff', 'user'), 
 router.get('/orders/:id/print-draft', protect, authorize('admin', 'staff'), printDraftBill);
 router.post('/orders/:id/accept', protect, authorize('admin', 'staff'), acceptOrder);
 router.post('/orders/:id/ready', protect, authorize('admin', 'staff'), readyOrder);
+router.post('/orders/:id/revert-serving', protect, authorize('admin', 'staff'), revertServingOrder);
 router.post('/orders/:id/confirm', protect, confirmOrder);
 router.post('/orders/:id/payos-link', protect, createPayOSPaymentLink);
 router.patch('/orders/:id/flag', protect, authorize('admin', 'staff'), updateOrderNoteAndFlag);

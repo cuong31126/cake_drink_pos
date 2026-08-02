@@ -169,7 +169,11 @@ const OrderMenu = () => {
                     console.error("Lỗi kiểm tra thanh toán:", err);
                 }
             };
-            intervalId = setInterval(checkPaymentStatus, 3000);
+            intervalId = setInterval(() => {
+                if (!document.hidden) {
+                    checkPaymentStatus();
+                }
+            }, 4000);
         }
         return () => { if (intervalId) clearInterval(intervalId); };
     }, [showPayModal, orderId, navigate]);
